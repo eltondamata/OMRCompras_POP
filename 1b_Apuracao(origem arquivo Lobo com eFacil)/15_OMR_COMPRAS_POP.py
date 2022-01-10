@@ -4,10 +4,13 @@
 
 import pandas as pd
 
-BDCPL = pd.read_pickle(r'..\OMR_COMPRAS_OCD.pkl')
-OMR_FRNUFCNL = pd.read_pickle(r'..\OMR_FRNUFCNL_POP.pkl')
-OMR_FRN = pd.read_pickle(r'..\OMR_FRN_POP.pkl')
-OMR_CODESTUNI = pd.read_pickle(r'..\OMR_CODESTUNI_POP.pkl')
+with open('../Parametros/caminho.txt','r') as f:
+    caminho = f.read()
+
+BDCPL = pd.read_feather(caminho + 'bd/OMR_COMPRAS_OCD.ft')
+OMR_FRNUFCNL = pd.read_feather(caminho + 'bd/OMR_FRNUFCNL_POP.ft')
+OMR_FRN = pd.read_feather(caminho + 'bd/OMR_FRN_POP.ft')
+OMR_CODESTUNI = pd.read_feather(caminho + 'bd/OMR_CODESTUNI_POP.ft')
 
 valores = ['VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRCSTMC']
 
@@ -114,7 +117,6 @@ BDCPL = BDCPL.pivot_table(index=['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGP
 BDCPL.columns = BDCPL.columns.get_level_values(1).rename('')
 BDCPL = BDCPL.reset_index()
 BDCPL['VLRMRGCRB'] = BDCPL['VLRMRGBRT'] + BDCPL['VLRCSTMC']
-BDCPL.to_pickle(r'..\OMR_COMPRAS_POP.pkl')
 
 #Conferencia total UF
 pd.options.display.float_format = '{:,.2f}'.format
@@ -142,4 +144,6 @@ dftot = pd.merge(dfori, dffim, how='inner', on='CODDIVFRN').reset_index()[['CODD
 dftot.columns = ['CODDIVFRN', 'DESDIVFRN', 'FAT ORIGEM', 'FAT FINAL']
 print(dftot.sort_values(by='FAT FINAL', ascending=False).head(20),'\n')
 
+#Export dataset final
+BDCPL.to_feather(caminho + 'bd/OMR_COMPRAS_POP.ft')
 print('CONCLUIDO!!!')

@@ -7,8 +7,11 @@ import sys
 sys.path.insert(0, r'C:\oracle\dwh')
 from OracleDWH import conn
 
-#Periodo (Parametro importado)
-NUMANOMESOCD = int(open('../NUMANOMESOCD.txt','r').read())
+with open('../Parametros/caminho.txt','r') as f:
+    caminho = f.read()
+with open('../Parametros/NUMANOMESOCD.txt','r') as f:
+    NUMANOMESOCD = f.read()
+NUMANOMESOCD = int(NUMANOMESOCD)
 NUMMESOCD = int(str(NUMANOMESOCD)[-2:])
 
 #Consulta Orçado (CODCNOOCD = 'OCD')
@@ -160,5 +163,5 @@ print('NUMANOMES:', NUMANOMESOCD)
 print(BASECOMPLETA[valores].sum().to_markdown(tablefmt='plsql', floatfmt=',.2f'))
 #print(DIVFRN_UF_CNL[valores].sum().to_markdown(tablefmt='plsql', floatfmt=',.2f'))
 
-BASECOMPLETA.to_pickle(r'..\OMR_COMPRAS_OCD.pkl')
-DIVFRN_UF_CNL.to_pickle(r'..\DIVFRN_UF_CNL.pkl')
+BASECOMPLETA.to_feather(caminho + 'bd/OMR_COMPRAS_OCD.ft')
+DIVFRN_UF_CNL.to_feather(caminho + 'bd/DIVFRN_UF_CNL.ft')

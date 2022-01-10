@@ -9,11 +9,15 @@
 #FAT=Faturamento, RL=Receita Liquida, MB=Margem Bruta, MC=Margem de Contribuicao, CSTMC=Custos na Margem de Contribuicao (MB-MC)
 
 import pandas as pd
-FRNFILUF_POP = pd.read_pickle(r'..\FaturamentoComprasPOP.pkl')
+
+with open('../Parametros/caminho.txt','r') as f:
+    caminho = f.read()
+
+FRNFILUF_POP = pd.read_feather(caminho + 'bd/FaturamentoComprasPOP.ft')
 FRNFILUF_POP.rename(columns={'CODESTUNI':'CODESTCLI'}, inplace=True)
 
 #Import Fornecedor x UF (FAT, RL, MB, MC) da base orcamento original (OCD). Salva no dataset = DIVFRN_UF_CNL
-DIVFRN_UF_CNL = pd.read_pickle(r'..\DIVFRN_UF_CNL.pkl')
+DIVFRN_UF_CNL = pd.read_feather(caminho + 'bd/DIVFRN_UF_CNL.ft')
 
 #Agrupa meta POP fornecedor x UF e salva no dataset = AJT_FRNUF
 AJT_FRNUF = FRNFILUF_POP.groupby(['CODDIVFRN','CODESTCLI', 'DESTIPCNLVNDOMR'])[['POP']].sum().reset_index()
@@ -64,6 +68,7 @@ for key, value in vlrajt.items():
 OMR_FRNUFCNL = pd.concat([OMR_FRNUF_A, OMR_FRNUF_B, OMR_FRNUF_C])
 OMR_FRNUFCNL = OMR_FRNUFCNL[['DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN', 'CODESTUNI', 'DESTIPCNLVNDOMR', 'FAT', 'RL', 'MB', 'MC', 'CSTMC']]
 OMR_FRNUFCNL.columns = ['DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN', 'CODESTUNI', 'DESTIPCNLVNDOMR', 'VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT','VLRMRGCRB','VLRCSTMC']
+OMR_FRNUFCNL.reset_index(drop=True, inplace=True)
 
 #Gera dataset's POP agrupado por fornecedor e estado (OMR_FRN = Total por Fornecedor, OMR_CODESTUNI = total por Estado)
 #OMR_FRN = POP total por fornecedor
@@ -85,6 +90,6 @@ confere.loc['TOTAL POP'] = confere.sum(axis=0)
 print(confere.reset_index().to_markdown(tablefmt='github', floatfmt=',.2f', index=False),'\n')
 
 #Exporta dataset's para arquivo .pkl
-OMR_FRNUFCNL.to_pickle(r'..\OMR_FRNUFCNL_POP.pkl')
-OMR_FRN.to_pickle(r'..\OMR_FRN_POP.pkl')
-OMR_CODESTUNI.to_pickle(r'..\OMR_CODESTUNI_POP.pkl')
+OMR_FRNUFCNL.to_feather(caminho + 'bd/OMR_FRNUFCNL_POP.ft')
+OMR_FRN.to_feather(caminho + 'bd/OMR_FRN_POP.ft')
+OMR_CODESTUNI.to_feather(caminho + 'bd/OMR_CODESTUNI_POP.ft')

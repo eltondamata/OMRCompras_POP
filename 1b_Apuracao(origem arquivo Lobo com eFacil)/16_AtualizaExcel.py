@@ -1,8 +1,15 @@
+#elton.mata@martins.com.br
+
 import pandas as pd
 
-OMRCOMPRAS_OCD = pd.read_pickle(r'..\OMR_COMPRAS_OCD.pkl')
-OMRCOMPRAS_POP = pd.read_pickle(r'..\OMR_COMPRAS_POP.pkl')
-NUMANOMESOCD = int(open('../NUMANOMESOCD.txt','r').read())
+with open('../Parametros/caminho.txt','r') as f:
+    caminho = f.read()
+with open('../Parametros/NUMANOMESOCD.txt','r') as f:
+    NUMANOMESOCD = f.read()
+NUMANOMESOCD = int(NUMANOMESOCD)
+
+OMRCOMPRAS_OCD = pd.read_feather(caminho + 'bd/OMR_COMPRAS_OCD.ft')
+OMRCOMPRAS_POP = pd.read_feather(caminho + 'bd/OMR_COMPRAS_POP.ft')
 
 dimensoes = ['DESDRTCLLATU', 'DESCTGPRD', 'DESDIVFRN', 'NOMGRPECOFRN', 'DESCLLCMPATU']
 valores = ['VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB']
@@ -33,8 +40,8 @@ ESTADO = ESTADO.sort_values(by='FAT_POP', ascending=False)
 #Atualiza arquivo excel
 print('iniciando atualização do arquivo xlsx...')
 from openpyxl import load_workbook
-book = load_workbook(r'..\Plan_Operacional.xlsx')
-writer = pd.ExcelWriter(r'..\Plan_Operacional.xlsx', engine='openpyxl') 
+book = load_workbook(caminho + 'Plan_Operacional.xlsx')
+writer = pd.ExcelWriter(caminho + 'Plan_Operacional.xlsx', engine='openpyxl') 
 writer.book = book
 writer.sheets = dict((ws.title, ws) for ws in book.worksheets)
 

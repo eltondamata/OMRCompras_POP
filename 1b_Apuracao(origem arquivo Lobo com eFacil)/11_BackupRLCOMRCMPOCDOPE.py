@@ -2,7 +2,9 @@
 #elton.mata@martins.com.br
 
 #definir arquivo feather
-filname = open('../Parametros/caminho.txt','r').read() + 'bd/RLCOMRCMPOCDOPE_bkp.ft'
+with open('../Parametros/caminho.txt','r') as f:
+    caminho = f.read()
+filname = caminho + 'bd/RLCOMRCMPOCDOPE_bkp.ft'
 
 #Importa as Bibliotecas
 import pandas as pd

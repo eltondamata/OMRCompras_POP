@@ -1,3 +1,4 @@
+#Python 3.8.2
 #elton.mata@martins.com.br
 
 #Importa as bibliotecas e conecta no Oracle dwh01
@@ -11,6 +12,7 @@ with open('../Parametros/caminho.txt','r') as f:
     caminho = f.read()
 with open('../Parametros/NUMANOMESOCD.txt','r') as f:
     NUMANOMESOCD = f.read()
+NUMANOMESOCD = int(NUMANOMESOCD)
 NUMMESOCD = int(str(NUMANOMESOCD)[-2:])
 
 #Parametros (ultimas 8 semandas seg a dom)
@@ -21,78 +23,84 @@ DATFIM = int(domingo.strftime("%Y%m%d")) #Ultimo Domingo (formato AnoMesDia)
 print('Periodo (Ultimas 8 semanas):', DATINI, "-", DATFIM)
 
 #arquivo de vendas (Faturamento por Fornecedor x Filial)
+#['DIRETORIA_VENDA', 'CODUNDREG', 'DESUNDREG', 'DESDRTCLLATU', 'DESCLLCMPATU', 'CODGRPECOFRN', 'NOMGRPECOFRN', 'CODDIVFRN', 'DESDIVFRN', 'Média 2M', 'OMR JANEIRO 2022', 'POP', 'POP ajustado', 'AJUSTE COMPRAS']
 dfvnd = pd.read_excel(caminho + 'ArquivosRecebidos/POP_Janeiro_2022 Geral (email Lobo 23dez21).xlsx', 'BD POP', usecols = "B:O")
+dfvnd = dfvnd.groupby(['DIRETORIA_VENDA', 'CODDIVFRN', 'CODUNDREG', 'DESCLLCMPATU'])[['AJUSTE COMPRAS']].sum().reset_index()
+dfvnd.rename(columns={'DIRETORIA_VENDA': 'DESTIPCNLVNDOMR', 'CODUNDREG':'CODFIL'}, inplace=True)
+dfvnd['DESTIPCNLVNDOMR'].replace('ATACADO', 'OUTROS CANAIS', inplace=True)
 
 #Consulta realizado
 mysql = (f"""
    SELECT {NUMANOMESOCD} AS NUMANOMESOCD,
           {NUMMESOCD} AS NUMMESOCD,
-          SUBCTGPRD.CODGRPPRD, 
-          SUBCTGPRD.CODCTGPRD, 
-          DIVFRN.CODDIVFRN, 
-          DIVFRN.DESDIVFRN, 
-          DIVFRN.NOMGRPECOFRN, 
-          t7.CODESTUNI, 
-          t5.CODFIL,
-          SUBCTGPRD.DESCTGPRD, 
-          DIVFRN.CODDRTCLLATU, 
-          DIVFRN.DESDRTCLLATU, 
-          DIVFRN.DESCLLCMPATU,
-          SUM(t1.VLRVNDFATLIQ) AS VLRVNDFATLIQ
-      FROM DWH.FTOOMRCMPDIA t1
-         , DWH.DIMPOD t2
-         , DWH.DIMTIP t3
-         , DWH.DIMCNOOCD t4
-         , DWH.DIMPRD DIVFRN
-         , DWH.DIMPRD SUBCTGPRD
-         , DWH.DIMGEO t7
-         , DWH.DIMFIL t5
-      WHERE t1.SRKPODREF = t2.SRKPOD 
-        AND t1.SRKTIPOPEVND = t3.SRKTIP 
-        AND t1.SRKCNOOCD = t4.SRKCNOOCD 
-        AND t1.SRKDIVFRN = DIVFRN.SRKPRD 
-        AND t1.SRKSUBCTGPRD = SUBCTGPRD.SRKPRD
-        AND t1.SRKGEO = t7.SRKGEO 
-        AND t1.SRKFIL = t5.SRKFIL
-        AND t3.CODTIP = 'VND'
-        AND t4.CODCNOOCD = 'RLZ'
-        AND t2.NUMANOMESDIA BETWEEN {DATINI} AND {DATFIM}
-      GROUP BY SUBCTGPRD.CODGRPPRD,
-               SUBCTGPRD.CODCTGPRD,
-               DIVFRN.CODDIVFRN,
-               DIVFRN.DESDIVFRN,
-               DIVFRN.NOMGRPECOFRN,
-               t7.CODESTUNI,
-               t5.CODFIL,
-               SUBCTGPRD.DESCTGPRD,
-               DIVFRN.CODDRTCLLATU,
-               DIVFRN.DESDRTCLLATU,
-               DIVFRN.DESCLLCMPATU
+          DIMPRD.CODGRPPRD, 
+          DIMPRD.CODCTGPRD, 
+          DIMPRD.CODDIVFRN, 
+          DIMPRD.DESDIVFRN, 
+          DIMPRD.NOMGRPECOFRN, 
+          DIMCLI.CODESTCLI, 
+          DIMFILEPD.CODFIL,
+          DIMPRD.DESCTGPRD, 
+          DIMPRD.CODDRTCLLATU, 
+          DIMPRD.DESDRTCLLATU, 
+          DIMPRD.DESCLLCMPATU,
+          DIMCNLVND.DESTIPCNLVNDOMR,
+          SUM(FTOFAT.VLRFATLIQ) AS VLRVNDFATLIQ
+   FROM DWH.FTOFAT FTOFAT
+      , DWH.DIMPRD DIMPRD
+      , DWH.DIMCLIEND DIMCLI
+      , DWH.DIMPOD DIMPOD
+      , DWH.DIMTIP DIMTIP
+      , DWH.DIMCNLVND DIMCNLVND
+      , DWH.DIMFIL DIMFILEPD
+   WHERE FTOFAT.SRKPRD = DIMPRD.SRKPRD 
+     AND FTOFAT.SRKCLIENDVND = DIMCLI.SRKCLIEND 
+     AND FTOFAT.SRKDATFAT = DIMPOD.SRKPOD 
+     AND FTOFAT.SRKTIPFAT = DIMTIP.SRKTIP 
+     AND FTOFAT.SRKCNLVNDINI = DIMCNLVND.SRKCNLVND 
+     AND FTOFAT.SRKFILEPD = DIMFILEPD.SRKFIL 
+     AND DIMTIP.CODTIP = 'VNDMER' 
+     AND DIMPOD.NUMANOMESDIA BETWEEN {DATINI} AND {DATFIM}
+ GROUP BY DIMPRD.CODGRPPRD, 
+          DIMPRD.CODCTGPRD, 
+          DIMPRD.CODDIVFRN, 
+          DIMPRD.DESDIVFRN, 
+          DIMPRD.NOMGRPECOFRN, 
+          DIMCLI.CODESTCLI, 
+          DIMFILEPD.CODFIL,
+          DIMPRD.DESCTGPRD, 
+          DIMPRD.CODDRTCLLATU, 
+          DIMPRD.DESDRTCLLATU, 
+          DIMPRD.DESCLLCMPATU,
+          DIMCNLVND.DESTIPCNLVNDOMR
   """)
 df = pd.read_sql(mysql, con=conn)
 conn.close()
 
-#NOMMES = 'Jan Fev Mar Abr Mai Jun Jul Ago Set Out Nov Dez'.split()
-#dic_NUMMES = dict(list(enumerate(NOMMES, start=1)))
-#df['NOMMES'] = df['NUMMESOCD'].map(dic_NUMMES)
+df['DESTIPCNLVNDOMR'].replace("E-FÁCIL", "EFACIL", inplace=True)
+df['DESTIPCNLVNDOMR'].replace('VENDAS DIGITAIS', 'OUTROS CANAIS', inplace=True)
+df = df.groupby(['NUMANOMESOCD', 'NUMMESOCD', 'CODGRPPRD', 'CODCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'NOMGRPECOFRN', 'CODESTCLI', 'CODFIL', 'DESCTGPRD', 'CODDRTCLLATU', 'DESDRTCLLATU', 'DESCLLCMPATU', 'DESTIPCNLVNDOMR'])[['VLRVNDFATLIQ']].sum().reset_index()
+
+NOMMES = 'Jan Fev Mar Abr Mai Jun Jul Ago Set Out Nov Dez'.split()
+dic_NUMMES = dict(list(enumerate(NOMMES, start=1)))
+df['NOMMES'] = df['NUMMESOCD'].map(dic_NUMMES)
 
 dfvnd['VLRFAT'] = dfvnd.iloc[:,-1:]
-dfvnd.rename(columns={'CODUNDREG':'CODFIL'}, inplace=True)
-dffrnfil = dfvnd.groupby(['CODDIVFRN', 'CODFIL'])[['VLRFAT']].sum().reset_index()
-dffrnfil = dffrnfil.query('VLRFAT>0')
+dffrnfilcnl = dfvnd.groupby(['CODDIVFRN', 'CODFIL', 'DESTIPCNLVNDOMR'])[['VLRFAT']].sum().reset_index()
+dffrnfilcnl = dffrnfilcnl.query('VLRFAT>0')
 
-#Distribui VLRFAT por UF (com base na participacao historica das ultimas 8 semanas)
-df['DRIVER'] = (df['VLRVNDFATLIQ'] / df.groupby(['CODDIVFRN', 'CODFIL'])['VLRVNDFATLIQ'].transform('sum'))
-df = df.merge(dffrnfil, how='inner', on=['CODDIVFRN', 'CODFIL'])
+#Distribui VLRFAT por UF (com base na participacao historica das ultimas 4 semanas)
+df['DRIVER'] = (df['VLRVNDFATLIQ'] / df.groupby(['CODDIVFRN', 'CODFIL', 'DESTIPCNLVNDOMR'])['VLRVNDFATLIQ'].transform('sum'))
+df = df.merge(dffrnfilcnl, how='inner', on=['CODDIVFRN', 'CODFIL', 'DESTIPCNLVNDOMR'])
 df.eval('VLRVNDFATLIQ=VLRFAT * DRIVER', inplace=True)
 df.drop(['DRIVER', 'VLRFAT'], axis=1, inplace=True)
 
 #Agrupa base de vendas por celula
-dfcel = dfvnd.groupby(['DESCLLCMPATU'])[['VLRFAT']].sum().reset_index()
+dfcel = dfvnd.groupby(['DESCLLCMPATU', 'DESTIPCNLVNDOMR'])[['VLRFAT']].sum().reset_index()
 
-#Alinha total por Celula
-df['DRIVER'] = (df['VLRVNDFATLIQ'] / df.groupby(['DESCLLCMPATU'])['VLRVNDFATLIQ'].transform('sum'))
-df = df.merge(dfcel, how='inner', on=['DESCLLCMPATU'])
+#Alinha total por Celula x Canal
+df['DRIVER'] = (df['VLRVNDFATLIQ'] / df.groupby(['DESCLLCMPATU', 'DESTIPCNLVNDOMR'])['VLRVNDFATLIQ'].transform('sum'))
+df = df.merge(dfcel, how='inner', on=['DESCLLCMPATU', 'DESTIPCNLVNDOMR'])
 df.eval('POP=VLRFAT * DRIVER', inplace=True)
 df.drop(['DRIVER', 'VLRFAT'], axis=1, inplace=True)
 
@@ -103,7 +111,11 @@ print(df.groupby('DESDRTCLLATU')[['VLRVNDFATLIQ', 'POP']].sum().reset_index(),'\
 print('Confere TOTAL por celula VLRVNDFATLIQ=Faturamento distribuido na base Historica e POP=Faturamento alinhado com a base de vendas no total da celula')
 confere = df.groupby('DESCLLCMPATU')[['VLRVNDFATLIQ', 'POP']].sum()
 confere.loc['TOTAL',:] = confere.sum()
+print(confere.reset_index(), '\n')
+confere = df.groupby('DESTIPCNLVNDOMR')[['VLRVNDFATLIQ', 'POP']].sum()
+confere.loc['TOTAL',:] = confere.sum()
 print(confere.reset_index())
+
 
 #Export base final com Faturamento por Fornecedor x Filial x UF (alem das dimensoes relacionadas a estrutura de compras)
 df.to_feather(caminho + 'bd/FaturamentoComprasPOP.ft')
