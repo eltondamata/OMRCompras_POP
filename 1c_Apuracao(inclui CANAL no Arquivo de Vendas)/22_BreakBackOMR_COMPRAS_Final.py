@@ -7,12 +7,15 @@ import pandas as pd
 import numpy as np
 pd.options.display.float_format = '{:,.2f}'.format
 
-df = pd.read_excel(r'..\Plan_Operacional_CARGA.xlsx', 'VAREJO', skiprows=6, usecols="B:C,M:N,Q:R")
+with open('../Parametros/caminho.txt','r') as f:
+    caminho = f.read()
+
+df = pd.read_excel(caminho + 'Plan_Operacional_CARGA.xlsx', 'VAREJO', skiprows=6, usecols="B:C,M:N,Q:R")
 df.insert(0,'DESDRTCLLATU','VAREJO ALIMENTAR E FARMA')
-df1 = pd.read_excel(r'..\Plan_Operacional_CARGA.xlsx', 'ELETRO', skiprows=6, usecols="B:C,M:N,Q:R")
+df1 = pd.read_excel(caminho + 'Plan_Operacional_CARGA.xlsx', 'ELETRO', skiprows=6, usecols="B:C,M:N,Q:R")
 df1.insert(0,'DESDRTCLLATU','ELETRO')
 df = df.append(df1)
-df1 = pd.read_excel(r'..\Plan_Operacional_CARGA.xlsx', 'MARTCON', skiprows=6, usecols="B:C,M:N,Q:R")
+df1 = pd.read_excel(caminho + 'Plan_Operacional_CARGA.xlsx', 'MARTCON', skiprows=6, usecols="B:C,M:N,Q:R")
 df1.insert(0,'DESDRTCLLATU','MARTCON/AGROVET')
 df = df.append(df1)
 df.columns = ['DESDRTCLLATU', 'DESCTGPRD', 'DESDIVFRN', 'VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB']
@@ -26,7 +29,7 @@ df = pd.melt(
 	value_name='VALOR')
 
 #importa base completa OMR_COMPRAS
-df_full = pd.read_pickle(r'..\OMR_COMPRAS_POPAJT.pkl')
+df_full = pd.read_feather(caminho + 'bd/OMR_COMPRAS_POPAJT.ft')
 df_full = pd.melt(
 	df_full, id_vars=['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'CODESTUNI', 'DESTIPCNLVNDOMR', 'DESCTGPRD', 'DESDRTCLLATU'],
 	value_vars=['VLRVNDFATLIQ','VLRRCTLIQAPU','VLRMRGBRT', 'VLRCSTMC'],
@@ -52,7 +55,7 @@ df_frn = df_frn.reset_index()
 df_frn.columns = ['CODDIVFRN','MEDIDA','VALOR']
 
 #importa planilha por UF
-df_uf = pd.read_excel(r'..\Plan_Operacional_CARGA.xlsx', 'UF', skiprows=6, usecols="B,J:K,N:O").dropna()
+df_uf = pd.read_excel(caminho + 'Plan_Operacional_CARGA.xlsx', 'UF', skiprows=6, usecols="B,J:K,N:O").dropna()
 df_uf.columns = ['CODESTUNI', 'VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB']
 df_uf['VLRCSTMC'] = df_uf['VLRMRGCRB'] - df_uf['VLRMRGBRT'] 
 df_uf = pd.melt(
@@ -65,7 +68,7 @@ print('\n', "PLANILHA DE CONTRIBUICAO POR ESTADO")
 print(df_uf.pivot_table(index=['MEDIDA'], values='VALOR', aggfunc=sum).unstack().unstack().to_string())
 
 #importa planilha por Tipo Canal
-df_tipcnl = pd.read_excel(r'..\POP_TIPCNLVND.xlsx', 'POP_TIPCNLVND')
+df_tipcnl = pd.read_excel(caminho + 'POP_TIPCNLVND.xlsx', 'POP_TIPCNLVND', usecols = "A:F")
 df_tipcnl = pd.melt(
 	df_tipcnl, id_vars=['DESTIPCNLVNDOMR'],
 	value_vars=['VLRVNDFATLIQ','VLRRCTLIQAPU','VLRMRGBRT', 'VLRCSTMC'],
@@ -124,7 +127,7 @@ confere5.loc[:,'MC'] = confere5['VLRMRGBRT'] + confere5['VLRCSTMC']
 df_full = df_full.pivot_table(index=['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'CODESTUNI', 'DESTIPCNLVNDOMR', 'DESCTGPRD', 'DESDRTCLLATU'], columns=['MEDIDA'], values='DRIVER', aggfunc=sum).reset_index()
 df_full = df_full.query('VLRVNDFATLIQ>0')
 df_full.eval('VLRMRGCRB=VLRMRGBRT+VLRCSTMC', inplace=True)
-df_full.to_pickle(r'..\OMR_COMPRAS_Final.pkl')
+df_full.to_feather(caminho + 'bd/OMR_COMPRAS_Final.ft')
 
 #Gera arquivo formato tabela de carga dwh.RLCOMRCMPOCDOPE
 df_full = df_full.groupby(['NOMMES','CODGRPPRD','CODCTGPRD','CODSUBCTGPRD','CODDIVFRN','CODESTUNI','DESTIPCNLVNDOMR'])[['VLRVNDFATLIQ','VLRRCTLIQAPU','VLRMRGBRT','VLRMRGCRB']].sum().reset_index()
@@ -157,8 +160,8 @@ confere6.loc['TOTAL',:] = confere6.sum()
 #Atualiza arquivo excel
 print('iniciando atualização do arquivo xlsx...')
 from openpyxl import load_workbook
-book = load_workbook(r'..\Confere_CARGARLC.xlsx')
-writer = pd.ExcelWriter(r'..\Confere_CARGARLC.xlsx', engine='openpyxl') 
+book = load_workbook(caminho + 'Confere_CARGARLC.xlsx')
+writer = pd.ExcelWriter(caminho + 'Confere_CARGARLC.xlsx', engine='openpyxl') 
 writer.book = book
 writer.sheets = dict((ws.title, ws) for ws in book.worksheets)
 
@@ -217,8 +220,8 @@ dfxls.to_excel(writer, sheet_name=planilha, startcol=0, startrow=9, header=True,
 writer.save()
 book.close()
 
-df_full.to_pickle(r'..\RLCOMRCMPOCDOPE_CARGA.pkl')
+df_full.to_feather(caminho + 'bd/RLCOMRCMPOCDOPE_CARGA.ft')
 
 print("Confere_CARGARLC.xlsx atualizado!")
-print("Dataset gerado: OMR_COMPRAS_Final.pkl")
-print("Dataset gerado: RLCOMRCMPOCDOPE_CARGA.pkl")
+print("Dataset gerado: OMR_COMPRAS_Final.ft")
+print("Dataset gerado: RLCOMRCMPOCDOPE_CARGA.ft")

@@ -7,7 +7,10 @@
 import pandas as pd
 pd.options.display.float_format = '{:,.2f}'.format
 
-df = pd.read_pickle(r'..\OMR_COMPRAS_POP.pkl')
+with open('../Parametros/caminho.txt','r') as f:
+    caminho = f.read()
+
+df = pd.read_feather(caminho + 'bd/OMR_COMPRAS_POP.ft')
 
 #inserido para garantir que nao tenha valor negativo de fat rl mb (arquivo de vendas forn x filial x uf veio com fat negativo no pop de nov21)
 df = df.query('VLRVNDFATLIQ>0 & VLRRCTLIQAPU>0 & VLRMRGBRT>0')
@@ -25,5 +28,5 @@ df.eval('VLRCSTMC=VLRRCTLIQAPU*CST', inplace=True)
 df.eval('VLRMRGCRB=VLRMRGBRT+VLRCSTMC', inplace=True)
 
 print('Aplica mesmo %MB das Subcategorias x Fornecedor x Canal para todos os estados')
-print('Novo dataset gerado: OMR_COMPRAS_POPAJT.pkl')
-df.iloc[:,:-2].to_pickle(r'..\OMR_COMPRAS_POPAJT.pkl')
+print('Novo dataset gerado: OMR_COMPRAS_POPAJT.ft')
+df.iloc[:,:-2].to_feather(caminho + 'bd/OMR_COMPRAS_POPAJT.ft')

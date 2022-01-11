@@ -9,8 +9,10 @@ from OracleDWH import conn
 pd.options.display.float_format = '{:,.2f}'.format
 from tabulate import tabulate
 
-#Periodo (Parametro importado)
-NUMANOMESOCD = int(open('../NUMANOMESOCD.txt','r').read())
+with open('../Parametros/caminho.txt','r') as f:
+    caminho = f.read()
+with open('../Parametros/NUMANOMESOCD.txt','r') as f:
+    NUMANOMESOCD = f.read()
 NUMMESOCD = int(str(NUMANOMESOCD)[-2:])
 
 #Consulta

@@ -11,6 +11,7 @@ with open('../Parametros/caminho.txt','r') as f:
     caminho = f.read()
 with open('../Parametros/NUMANOMESOCD.txt','r') as f:
     NUMANOMESOCD = f.read()
+NUMANOMESOCD = int(NUMANOMESOCD)
 NUMMESOCD = int(str(NUMANOMESOCD)[-2:])
 
 #Consulta Orçado (CODCNOOCD = 'OCD')

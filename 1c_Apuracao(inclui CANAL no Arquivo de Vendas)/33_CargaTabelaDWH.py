@@ -10,9 +10,12 @@ sys.path.insert(0, r'C:\oracle\dwh')
 from OracleDWH import conn, connx
 import time
 
+with open('../Parametros/caminho.txt','r') as f:
+    caminho = f.read()
+
 start = time.strftime("%b %d %Y %H:%M:%S")
-arquivo_pkl = r'..\RLCOMRCMPOCDOPE_CARGA.pkl'
-df = pd.read_pickle(arquivo_pkl)
+arquivo_ft = caminho + 'bd/RLCOMRCMPOCDOPE_CARGA_AJT.ft'
+df = pd.read_feather(arquivo_ft)
 
 #Filtra os meses e cenarios que estao no arquivos (usado para deletar os registros do DWH)
 DELETAR = df[['NOMMES']].drop_duplicates()

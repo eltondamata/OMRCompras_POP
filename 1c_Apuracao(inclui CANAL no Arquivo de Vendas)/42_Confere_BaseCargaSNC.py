@@ -15,8 +15,11 @@ today = datetime.date.today()
 today = today.replace(day=1)
 today = today + relativedelta(months=+1)
 #MESSEG = (today.year*100 + today.month)
-PNUMANOMES = (today.year*100 + today.month)
-#PNUMANOMES = 202112
+
+with open('../Parametros/NUMANOMESOCD.txt','r') as f:
+    PNUMANOMES = f.read()
+#PNUMANOMES = (today.year*100 + today.month)
+#PNUMANOMES = 202201
 
 #Parametro (default = mes seguinte)
 #print("!!! Altere o NUMANOMES ou pressione ENTER pra continuar !!!")

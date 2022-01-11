@@ -1,9 +1,13 @@
 #Atualizar valor de referencia para calculo do POP ajustado por Tipo de Canal (POP_TIPCNLVND.xlsx)
 #Valor de referencia refere-se ao valor definido por fornecedor x UF (Recebido de vendas) para as demais dimensoes do OMR Compras.
 import pandas as pd
+
+with open('../Parametros/caminho.txt','r') as f:
+    caminho = f.read()
+
 pd.options.display.float_format = '{:,.2f}'.format
 #importa base completa OMR_COMPRAS
-df = pd.read_pickle(r'..\OMR_COMPRAS_POP.pkl')
+df = pd.read_feather(caminho + 'bd/OMR_COMPRAS_POP.ft')
 
 #Agrupa valores da Planilha em Diretoria x Categoria
 valores = 'VLRVNDFATLIQ VLRRCTLIQAPU VLRMRGBRT VLRMRGCRB VLRCSTMC'.split()
@@ -14,8 +18,8 @@ print(dfcnl.to_string())
 #Atualiza arquivo excel
 print('iniciando atualização do arquivo xlsx...')
 from openpyxl import load_workbook
-book = load_workbook(r'..\POP_TIPCNLVND.xlsx')
-writer = pd.ExcelWriter(r'..\POP_TIPCNLVND.xlsx', engine='openpyxl') 
+book = load_workbook(caminho + 'POP_TIPCNLVND.xlsx')
+writer = pd.ExcelWriter(caminho + 'POP_TIPCNLVND.xlsx', engine='openpyxl') 
 writer.book = book
 writer.sheets = dict((ws.title, ws) for ws in book.worksheets)
 

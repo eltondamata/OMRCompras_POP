@@ -7,10 +7,15 @@ import sys
 sys.path.insert(0, r'C:\oracle\dwh')
 from OracleDWH import conn
 pd.options.display.float_format = '{:,.2f}'.format
-arquivo_pkl = r'..\RLCOMRCMPOCDOPE_CARGA.pkl'
-frncel_pkl = r'..\frncel.pkl'
 
-NUMANOMESOCD = int(open('../NUMANOMESOCD.txt','r').read())
+with open('../Parametros/caminho.txt','r') as f:
+    caminho = f.read()
+with open('../Parametros/NUMANOMESOCD.txt','r') as f:
+    NUMANOMESOCD = f.read()
+
+arquivo_ft = caminho + 'bd/RLCOMRCMPOCDOPE_CARGA.ft'
+frncel_ft = caminho + 'bd/frncel.ft'
+
 NUMMESOCD = int(str(NUMANOMESOCD)[-2:])
 NOMMES = 'Jan Fev Mar Abr Mai Jun Jul Ago Set Out Nov Dez'.split()
 dic_NUMMES = dict(list(enumerate(NOMMES, start=1)))
@@ -63,8 +68,8 @@ conn.close()
 dffto['DESTIPCNLVNDOMR'] = dffto['DESTIPCNLVNDOMR'].replace({'E-FÁCIL': 'EFACIL'})
 dffto['NOMMES'] = dffto['NUMMESOCD'].map(dic_NUMMES)
 
-dfrlc = pd.read_pickle(arquivo_pkl)
-frncel = pd.read_pickle(frncel_pkl)
+dfrlc = pd.read_feather(arquivo_ft)
+frncel = pd.read_feather(frncel_ft)
 frncel.columns = ['CODFRN', 'DESDRTCLLATU', 'DESCLLCMPATU']
 
 dffto = dffto.merge(frncel, how='inner', on='CODFRN')
@@ -95,7 +100,7 @@ BDCPL.columns = BDCPL.columns.get_level_values(1).rename('')
 BDCPL = BDCPL.reset_index()
 
 dfcrg = BDCPL[['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODFRN', 'CODESTUNI', 'DESTIPCNLVNDOMR', 'VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB']]
-dfcrg.to_pickle(r'..\RLCOMRCMPOCDOPE_CARGA_AJT.pkl')
+dfcrg.to_feather(caminho + 'bd/RLCOMRCMPOCDOPE_CARGA_AJT.ft')
 
 print('BASE CARGA ORIGINAL')
 #print(dfrlc.groupby('DESDRTCLLATU')[valores].sum().reset_index().to_string(),'\n')

@@ -7,7 +7,9 @@ import sys
 sys.path.insert(0, r'C:\oracle\dwh')
 from OracleDWH import conn
 pd.options.display.float_format = '{:,.2f}'.format
-NUMANOMESOCD = int(open('../NUMANOMESOCD.txt','r').read())
+
+with open('../Parametros/NUMANOMESOCD.txt','r') as f:
+    NUMANOMESOCD = f.read()
 
 #Consulta
 mysql = (f"""     
@@ -58,7 +60,6 @@ df = df.fillna('')
 df.loc['TOTAL','DESFIL'] = "TOTAL"
 
 print('Confere FTOOCDMTZRCTCMP')
-print(df.to_markdown(index=False, tablefmt='github', floatfmt=',.2f', numalign='right'),'\n')
+print(df.to_markdown(index=False, tablefmt='github', floatfmt=',.2f', numalign='right'))
+#print(df.to_string(float_format='{:,.2f}'.format, index=False))
 #print(df.to_string(float_format='%.2f', decimal=','))
-
-print('!!! Em caso de divergencia executar os processos "2_51 a 2_56" para ajustar!!!')
