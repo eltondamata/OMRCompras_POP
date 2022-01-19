@@ -13,6 +13,8 @@ with open('../Parametros/NUMANOMESOCD.txt','r') as f:
     NUMANOMESOCD = f.read()
 NUMANOMESOCD = int(NUMANOMESOCD)
 NUMMESOCD = int(str(NUMANOMESOCD)[-2:])
+ANOMES_ini = (date.today().replace(day=1) - timedelta(days=1)).strftime("%Y%m") #Mes Anterior
+ANOMES_atu = (date.today().replace(day=1)).strftime("%Y%m") #Mes Atual
 
 #Consulta Orçado (CODCNOOCD = 'OCD')
 mysql = (f"""
@@ -115,7 +117,7 @@ SELECT {NUMANOMESOCD} AS NUMANOMESOCD,
         AND t1.SRKFIL = t5.SRKFIL 
         AND t3.CODTIP = 'FAT' 
         AND t4.CODCNOOCD = 'RLZ' 
-        AND t2.NUMANOMES BETWEEN {NUMANOMESOCD-1} AND {NUMANOMESOCD}
+        AND t2.NUMANOMES BETWEEN {ANOMES_ini} AND {ANOMES_atu}
       GROUP BY SUBCTGPRD.CODGRPPRD,
                SUBCTGPRD.CODCTGPRD,
                SUBCTGPRD.CODSUBCTGPRD,
