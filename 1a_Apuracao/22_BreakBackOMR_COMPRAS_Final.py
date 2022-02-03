@@ -127,6 +127,7 @@ confere5.loc[:,'MC'] = confere5['VLRMRGBRT'] + confere5['VLRCSTMC']
 df_full = df_full.pivot_table(index=['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'CODESTUNI', 'DESTIPCNLVNDOMR', 'DESCTGPRD', 'DESDRTCLLATU'], columns=['MEDIDA'], values='DRIVER', aggfunc=sum).reset_index()
 df_full = df_full.query('VLRVNDFATLIQ>0')
 df_full.eval('VLRMRGCRB=VLRMRGBRT+VLRCSTMC', inplace=True)
+df_full.reset_index(drop=True, inplace=True)
 df_full.to_feather(caminho + 'bd/OMR_COMPRAS_Final.ft')
 
 #Gera arquivo formato tabela de carga dwh.RLCOMRCMPOCDOPE

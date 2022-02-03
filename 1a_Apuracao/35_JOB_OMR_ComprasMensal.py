@@ -13,7 +13,7 @@ Assunto:
 Execução eventual -- WADWH31B
 
 Texto:
-Solicito a execução eventual do grupo WADWH31B que está na aplicação E_WA
+Favor executar novamente o eventual do grupo WADWH31B que está na aplicação E_WA
 Parâmetro a ser informado ANO = 2022
 
 Grato,
@@ -30,7 +30,7 @@ sender = 'elton.mata@martins.com.br'
 subject = "Execução eventual -- WADWH31B"
 
 body = f"""<html><body>
-Solicito a execução eventual do grupo WADWH31B que está na aplicação E_WA<br />
+Favor executar novamente o eventual do grupo WADWH31B que está na aplicação E_WA<br />
 Parâmetro a ser informado <b>ANO = 2022</b>
 
 <p>

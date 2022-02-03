@@ -8,7 +8,7 @@ with open('../Parametros/caminho.txt','r') as f:
     caminho = f.read()
     
 BDCPL = pd.read_feather(caminho + 'bd/OMR_COMPRAS_OCD.ft')
-OMR_FRNUF = pd.read_feather(caminho + 'bd/OMR_FRNUF_POP.ft')
+OMR_FRNUFCNL = pd.read_feather(caminho + 'bd/OMR_FRNUFCNL_POP.ft')
 OMR_FRN = pd.read_feather(caminho + 'bd/OMR_FRN_POP.ft')
 OMR_CODESTUNI = pd.read_feather(caminho + 'bd/OMR_CODESTUNI_POP.ft')
 
@@ -26,13 +26,13 @@ BDCPL = pd.melt(
 #print(confere.pivot_table(index=['MEDIDA'], values='DRIVER', aggfunc=sum).transpose().to_markdown(tablefmt='github', floatfmt=',.2f'),'\n')
 
 #OMR Fornecedor x UF
-OMR_FRNUF = pd.melt(
-	OMR_FRNUF, id_vars=['DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN', 'CODESTUNI'],
+OMR_FRNUFCNL = pd.melt(
+	OMR_FRNUFCNL, id_vars=['DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN', 'CODESTUNI', 'DESTIPCNLVNDOMR'],
 	value_vars=valores,
 	var_name='MEDIDA',
 	value_name='VALOR')
 print("OMR Fornecedor x UF POP -- Fonte: Arquivo de Vendas após abertura RL MB e MC")
-confere = OMR_FRNUF.pivot_table(index=['DESDRTCLLATU','MEDIDA'], values='VALOR', aggfunc=sum)
+confere = OMR_FRNUFCNL.pivot_table(index=['DESDRTCLLATU','MEDIDA'], values='VALOR', aggfunc=sum)
 print(confere.unstack().to_markdown(tablefmt='github', floatfmt=',.2f'))
 print(confere.pivot_table(index=['MEDIDA'], values='VALOR', aggfunc=sum).transpose().to_markdown(tablefmt='github', floatfmt=',.2f'),'\n')
 
@@ -58,9 +58,9 @@ OMR_CODESTUNI = pd.melt(
 
 
 #Base Completa após Distribuir Fornecedor x UF
-dimensoes = ['DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN', 'CODESTUNI', 'MEDIDA']
+dimensoes = ['DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN', 'CODESTUNI', 'DESTIPCNLVNDOMR', 'MEDIDA']
 BDCPL['DRIVER'] = (BDCPL['DRIVER'] / BDCPL.groupby(dimensoes)['DRIVER'].transform('sum'))
-BDCPL = BDCPL.merge(OMR_FRNUF, how='inner', on=dimensoes)
+BDCPL = BDCPL.merge(OMR_FRNUFCNL, how='inner', on=dimensoes)
 BDCPL['DRIVER'] = BDCPL['DRIVER'] * BDCPL['VALOR']
 del BDCPL['VALOR']
 #print('\n', "ATENCAO == OMR Compras POP -- após distribuir Proposta de Vendas na Base Completa")
@@ -91,7 +91,7 @@ for x in range(5):
 
 #BREAKBACK CELULA e UF
 #Objetivo alinhar o total da celula e total do estado (distribui as diferencas nos cruzamentos)
-OMR_CEL = OMR_FRNUF.groupby(['DESCLLCMPATU','MEDIDA'])[['VALOR']].sum().reset_index()
+OMR_CEL = OMR_FRNUFCNL.groupby(['DESCLLCMPATU', 'DESTIPCNLVNDOMR','MEDIDA'])[['VALOR']].sum().reset_index()
 for x in range(10):
 	#Distribui ESTADO
 	dimensoes = ['CODESTUNI', 'MEDIDA']
@@ -100,8 +100,8 @@ for x in range(10):
 	BDCPL['DRIVER'] = BDCPL['DRIVER'] * BDCPL['VALOR']
 	del BDCPL['VALOR']
 
-	#Distribui CELULA
-	dimensoes = ['DESCLLCMPATU', 'MEDIDA']
+	#Distribui CELULA X CANAL
+	dimensoes = ['DESCLLCMPATU', 'DESTIPCNLVNDOMR', 'MEDIDA']
 	BDCPL['DRIVER'] = (BDCPL['DRIVER'] / BDCPL.groupby(dimensoes)['DRIVER'].transform('sum'))
 	BDCPL = BDCPL.merge(OMR_CEL, how='inner', on=dimensoes)
 	BDCPL['DRIVER'] = BDCPL['DRIVER'] * BDCPL['VALOR']
@@ -121,7 +121,7 @@ BDCPL.to_feather(caminho + 'bd/OMR_COMPRAS_POP.ft')
 
 #Conferencia total UF
 pd.options.display.float_format = '{:,.2f}'.format
-dfufori = OMR_FRNUF.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['CODESTUNI'])['VALOR'].sum()
+dfufori = OMR_FRNUFCNL.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['CODESTUNI'])['VALOR'].sum()
 dfuffim = BDCPL.groupby(['CODESTUNI'])['VLRVNDFATLIQ'].sum()
 print('Conferencia Faturamento por UF')
 totuf = pd.merge(dfufori, dfuffim, how='inner', on='CODESTUNI').reset_index()
@@ -129,7 +129,7 @@ totuf.columns = ['CODESTUNI', 'FAT ORIGEM', 'FAT FINAL']
 print(totuf,'\n')
 
 #Conferencia total CELULA
-dfori = OMR_FRNUF.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['DESCLLCMPATU'])['VALOR'].sum()
+dfori = OMR_FRNUFCNL.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['DESCLLCMPATU'])['VALOR'].sum()
 dffim = BDCPL.groupby(['DESCLLCMPATU'])['VLRVNDFATLIQ'].sum()
 print('Conferencia Faturamento por CELULA')
 totuf = pd.merge(dfori, dffim, how='inner', on='DESCLLCMPATU').reset_index()
@@ -137,7 +137,7 @@ totuf.columns = ['DESCLLCMPATU', 'FAT ORIGEM', 'FAT FINAL']
 print(totuf,'\n')
 
 #Conferencia total FORNECEDOR (Top 20)
-dfori = OMR_FRNUF.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['CODDIVFRN'])['VALOR'].sum().reset_index()
+dfori = OMR_FRNUFCNL.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['CODDIVFRN'])['VALOR'].sum().reset_index()
 dffim = BDCPL.groupby(['CODDIVFRN','DESDIVFRN'])['VLRVNDFATLIQ'].sum().reset_index()
 print('Conferencia Faturamento por FORNECEDOR (TOP 20) -- Nao tem objetivo de bater, apenas aproximar do valor original')
 print('Divergencia por fornecedor ocorre quando é definido meta para fornecedor sem referencia historica, processo alinha no total da celula e distribui diferença para todos os fornecedores')

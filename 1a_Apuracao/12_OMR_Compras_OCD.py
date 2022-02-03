@@ -160,11 +160,11 @@ BASECOMPLETA = BASECOMPLETA.groupby(['NOMMES','CODGRPPRD', 'CODCTGPRD', 'CODSUBC
 BASECOMPLETA['VLRCSTMC'] = BASECOMPLETA['VLRMRGCRB'] - BASECOMPLETA['VLRMRGBRT']
 
 valores = ['VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB', 'VLRCSTMC']
-DIVFRN_UF = BASECOMPLETA.groupby(['DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN', 'CODESTUNI'])[valores].sum().reset_index()
+DIVFRN_UF_CNL = BASECOMPLETA.groupby(['DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN', 'CODESTUNI', 'DESTIPCNLVNDOMR'])[valores].sum().reset_index()
 
 print('NUMANOMES:', NUMANOMESOCD)
 print(BASECOMPLETA[valores].sum().to_markdown(tablefmt='plsql', floatfmt=',.2f'))
-#print(DIVFRN_UF[valores].sum().to_markdown(tablefmt='plsql', floatfmt=',.2f'))
+#print(DIVFRN_UF_CNL[valores].sum().to_markdown(tablefmt='plsql', floatfmt=',.2f'))
 
 BASECOMPLETA.to_feather(caminho + 'bd/OMR_COMPRAS_OCD.ft')
-DIVFRN_UF.to_feather(caminho + 'bd/DIVFRN_UF.ft')
+DIVFRN_UF_CNL.to_feather(caminho + 'bd/DIVFRN_UF_CNL.ft')
