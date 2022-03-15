@@ -18,7 +18,7 @@ today = today + relativedelta(months=+1)
 with open('../Parametros/NUMANOMESOCD.txt','r') as f:
     PNUMANOMES = f.read()
 #PNUMANOMES = (today.year*100 + today.month)
-#PNUMANOMES = 202202
+PNUMANOMES = 202203
 
 #Parametro (default = mes seguinte)
 #print("!!! Altere o NUMANOMES ou pressione ENTER pra continuar !!!")

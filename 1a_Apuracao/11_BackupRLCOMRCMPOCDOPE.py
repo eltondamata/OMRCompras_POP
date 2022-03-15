@@ -1,4 +1,3 @@
-#Python 3.8.2
 #elton.mata@martins.com.br
 
 #definir arquivo feather
