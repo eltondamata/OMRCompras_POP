@@ -21,15 +21,16 @@ DIVFRN_UF_CNL = pd.read_feather(caminho + 'bd/DIVFRN_UF_CNL.ft')
 
 #Import arquivo com meta definida por Fornecedor, Filial e UF. Salva dados no dataset = FRNFILUF_POP
 arquivo = caminho + 'Faturamento Compras POP.xlsx'
-planilha = 'FILIAL UF'
-column_arquivo = ['DIRETORIA_VENDA', 'DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN', 'CODUNDREG', 'CODESTCLI', 'POP']
+planilha = 'URN_UF'
+column_arquivo = ['DIRETORIA', 'DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN', 'CODUNDREG', 'CODESTCLI', 'POP']
 data_type =      ['string'         , 'string'      , 'string'      , 'int32'    , 'int32'    , 'string'   , 'float']
 table = agate.Table.from_xlsx(arquivo, sheet=planilha).select(column_arquivo)
 FRNFILUF_POP = pd.DataFrame(table)
 FRNFILUF_POP = pd.DataFrame(table.rows, columns=table.column_names)
 dic_dtype = dict(zip(column_arquivo, data_type))
+FRNFILUF_POP = FRNFILUF_POP.query('~DIRETORIA.isnull()', engine='python') #Exclui as linhas em branco importadas do final do arquivo -- linhas vazias sao importadas quando as celulas estao formatadas 
 FRNFILUF_POP = FRNFILUF_POP.astype(dtype=dic_dtype)
-FRNFILUF_POP.rename(columns={'DIRETORIA_VENDA': 'DESTIPCNLVNDOMR', 'CODUNDREG':'CODFIL'}, inplace=True)
+FRNFILUF_POP.rename(columns={'DIRETORIA': 'DESTIPCNLVNDOMR', 'CODUNDREG':'CODFIL'}, inplace=True)
 FRNFILUF_POP['DESTIPCNLVNDOMR'].replace('ATACADO', 'OUTROS CANAIS', inplace=True)
 
 #Confere valor total
