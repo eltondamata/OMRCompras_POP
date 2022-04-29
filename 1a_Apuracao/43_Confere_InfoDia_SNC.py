@@ -27,9 +27,9 @@ print(pd.DataFrame(infodia.agg({'VLRTOTFAT':'sum', 'VLRPRVFAT': 'sum'}) \
                           .transpose().to_markdown(tablefmt='github', floatfmt=',.2f', index=False), '\n')
 
 #Consulta SNC ['DATREF', 'CODFILEMPEPD', 'CODFRN', 'CODGRPMER', 'CODFMLMER', 'CODCLSMER', 'VLRTOTVNDPPS', 'VLRPPSMRGCRBVND', 'VLRRCTLIQAPUOCD', 'VLRMRGBRTOCD']
-#MRT.HSTDIRPPSFRNCTG frnctg
-#MRT.HSTDIRPPSFRNEST  frnest
-mysql = (f"""     
+#Valor meta entre essas duas tabelas é a mesma, muda apenas as dimensões (MRT.HSTDIRPPSFRNCTG frnctg) (MRT.HSTDIRPPSFRNEST  frnest)
+#Tabela base de dados do SNC (mesmo valor da meta também) MRT.T0151039 (Valor Meta Faturamento POP = VLRPPSFATFCHPOD)
+mysql = (f"""
 select * from MRT.HSTDIRPPSFRNCTG 
 WHERE TO_CHAR(DATREF, 'YYYYMM') = {MESREF}
 --FETCH FIRST 5 ROWS ONLY

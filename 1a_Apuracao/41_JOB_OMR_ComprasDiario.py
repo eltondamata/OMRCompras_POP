@@ -5,7 +5,7 @@ Roda automaticamente todo dia 1º do mes, mas é necessário solicitar a atualiz
 Informação: Período de referência da base histórica para abrir a meta por filial = Ano do parâmetro informado no email -1 (ano anterior completo)
 Se for alterar esse periodo para pegar base mais recente, não deixar que o ano seja igual ao do parametro, pois isso dá erro na virada de ano que o parametro informado é do ano do orçamento e nesse caso não terá valor realizado. Caso tenha essa necessidade ajustar esse parametro para pegar uma referencia dos últimos meses independente do parametro informado.
 
-Tempo Carga Fato: 50 minutos
+Tempo Carga Fato: 45 minutos (29/04/2022)
 Tempo total (atualiza Fato e cubo)
 28/05/2020 - 01:46 (qui 08:58-10:44)
 30/09/2020 - 03:03 (09:21-12:24)
