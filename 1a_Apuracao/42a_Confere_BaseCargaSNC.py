@@ -64,7 +64,7 @@ conn.close()
 if df.empty:
     print(f'Tabela FATO vazia para mes: {PNUMANOMES}')
 else:
-    #Exportar dados para arquivo.csv
+    #Confere Faturamento
     pvt = df.pivot_table(index=['DATREF'], columns=['CODFILEMPEPD'], values=['VLRTOTVNDPPS'])
     pvt.columns = pvt.columns.get_level_values(1).rename('')
     pvt.loc[:,'TOTAL'] = pvt.sum(axis=1)
@@ -105,4 +105,4 @@ else:
     pvtmb.iloc[-1:,-1] = 'TOTAL'
     print("Margem Contribuicao")
     print(tabulate(pvtmb, headers='keys', tablefmt='psql', floatfmt=',.2f', showindex=False, numalign='right'))
-        
+    
