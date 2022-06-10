@@ -1,4 +1,3 @@
-#Python 3.8.2
 #elton.mata@martins.com.br
 
 #Importa as bibliotecas e conecta no Oracle dwh01
@@ -27,7 +26,8 @@ mysql = (f"""
           DIVFRN.CODDIVFRN, 
           DIVFRN.DESDIVFRN, 
           DIVFRN.NOMGRPECOFRN, 
-          t7.CODESTUNI, 
+          t7.CODESTUNI,
+          t5.CODFIL AS CODFILEPD, 
           t6.DESTIPCNLVND AS DESTIPCNLVNDOMR,
           SUBCTGPRD.DESCTGPRD, 
           DIVFRN.CODDRTCLLATU, 
@@ -67,6 +67,7 @@ mysql = (f"""
                DIVFRN.DESDIVFRN,
                DIVFRN.NOMGRPECOFRN,
                t7.CODESTUNI,
+               t5.CODFIL,
                t6.DESTIPCNLVND,
                SUBCTGPRD.DESCTGPRD,
                DIVFRN.CODDRTCLLATU,
@@ -87,6 +88,7 @@ SELECT {NUMANOMESOCD} AS NUMANOMESOCD,
           DIVFRN.DESDIVFRN, 
           DIVFRN.NOMGRPECOFRN, 
           t7.CODESTUNI, 
+          t5.CODFIL AS CODFILEPD,
           t6.DESTIPCNLVND AS DESTIPCNLVNDOMR, 
           SUBCTGPRD.DESCTGPRD, 
           DIVFRN.CODDRTCLLATU, 
@@ -126,6 +128,7 @@ SELECT {NUMANOMESOCD} AS NUMANOMESOCD,
                DIVFRN.DESDIVFRN,
                DIVFRN.NOMGRPECOFRN,
                t7.CODESTUNI,
+               t5.CODFIL,
                t6.DESTIPCNLVND,
                SUBCTGPRD.DESCTGPRD,
                DIVFRN.CODDRTCLLATU,
@@ -136,7 +139,7 @@ SELECT {NUMANOMESOCD} AS NUMANOMESOCD,
 BSEINIRLZ = pd.read_sql(mysql, con=conn)
 conn.close()
 
-key = 'CODDRTCLLATU CODGRPPRD CODCTGPRD CODDIVFRN'.split()
+key = 'CODDRTCLLATU CODGRPPRD CODCTGPRD CODDIVFRN CODFILEPD'.split()
 CTGFRNPOP = BSEINIPOP.drop_duplicates(key)[key]
 CTGFRNRLZ = BSEINIRLZ.drop_duplicates(key)[key]
 CTGFRNRLZi = CTGFRNRLZ.merge(CTGFRNPOP, indicator='i', how='outer').query('i == "left_only"').drop('i', 1)
@@ -149,22 +152,22 @@ for i in valores:
 dic_DESTIPCNLVNDOMR = {'B2B':'OUTROS CANAIS', 'E-FÁCIL':'EFACIL'}
 BSEINIRLZi['DESTIPCNLVNDOMR'] = BSEINIRLZi['DESTIPCNLVNDOMR'].map(dic_DESTIPCNLVNDOMR).fillna(BSEINIRLZi['DESTIPCNLVNDOMR'])
 
-BASECOMPLETA = pd.concat([BSEINIPOP.query('VLRVNDFATLIQ>0 & VLRRCTLIQAPU>0 & VLRMRGBRT>0'), BSEINIRLZi.query('VLRVNDFATLIQ>0 & VLRRCTLIQAPU>0 & VLRMRGBRT>0')])
+OMR_COMPRAS_OCD = pd.concat([BSEINIPOP.query('VLRVNDFATLIQ>0 & VLRRCTLIQAPU>0 & VLRMRGBRT>0'), BSEINIRLZi.query('VLRVNDFATLIQ>0 & VLRRCTLIQAPU>0 & VLRMRGBRT>0')])
 
 NOMMES = 'Jan Fev Mar Abr Mai Jun Jul Ago Set Out Nov Dez'.split()
 dic_NUMMES = dict(list(enumerate(NOMMES, start=1)))
 
-BASECOMPLETA['NOMMES'] = BASECOMPLETA['NUMMESOCD'].map(dic_NUMMES)
+OMR_COMPRAS_OCD['NOMMES'] = OMR_COMPRAS_OCD['NUMMESOCD'].map(dic_NUMMES)
 
-BASECOMPLETA = BASECOMPLETA.groupby(['NOMMES','CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN','DESDIVFRN', 'NOMGRPECOFRN', 'CODESTUNI', 'DESTIPCNLVNDOMR','DESCTGPRD', 'CODDRTCLLATU', 'DESDRTCLLATU','DESCLLCMPATU','CODCNOOCD'])[valores].sum().reset_index()
-BASECOMPLETA['VLRCSTMC'] = BASECOMPLETA['VLRMRGCRB'] - BASECOMPLETA['VLRMRGBRT']
+OMR_COMPRAS_OCD = OMR_COMPRAS_OCD.groupby(['NOMMES','CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'NOMGRPECOFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR','DESCTGPRD', 'CODDRTCLLATU', 'DESDRTCLLATU','DESCLLCMPATU','CODCNOOCD'])[valores].sum().reset_index()
+OMR_COMPRAS_OCD['VLRCSTMC'] = OMR_COMPRAS_OCD['VLRMRGCRB'] - OMR_COMPRAS_OCD['VLRMRGBRT']
 
 valores = ['VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB', 'VLRCSTMC']
-DIVFRN_UF_CNL = BASECOMPLETA.groupby(['DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN', 'CODESTUNI', 'DESTIPCNLVNDOMR'])[valores].sum().reset_index()
+DIVFRN_UF_FIL_CNL = OMR_COMPRAS_OCD.groupby(['DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR'])[valores].sum().reset_index()
 
 print('NUMANOMES:', NUMANOMESOCD)
-print(BASECOMPLETA[valores].sum().to_markdown(tablefmt='plsql', floatfmt=',.2f'))
+print(OMR_COMPRAS_OCD[valores].sum().to_markdown(tablefmt='plsql', floatfmt=',.2f'))
 #print(DIVFRN_UF_CNL[valores].sum().to_markdown(tablefmt='plsql', floatfmt=',.2f'))
 
-BASECOMPLETA.to_feather(caminho + 'bd/OMR_COMPRAS_OCD.ft')
-DIVFRN_UF_CNL.to_feather(caminho + 'bd/DIVFRN_UF_CNL.ft')
+OMR_COMPRAS_OCD.to_feather(caminho + 'bd/OMR_COMPRAS_OCD.ft')
+DIVFRN_UF_FIL_CNL.to_feather(caminho + 'bd/DIVFRN_UF_FIL_CNL.ft')
