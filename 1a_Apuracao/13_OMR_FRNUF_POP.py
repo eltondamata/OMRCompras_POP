@@ -12,12 +12,13 @@ import pandas as pd
 import agate
 import agateexcel 
 
-#Import Fornecedor x UF (FAT, RL, MB, MC) da base orcamento original (OCD). Salva no dataset = DIVFRN_UF
+#Import parametro path
 with open('../Parametros/caminho.txt','r') as f:
     caminho = f.read()
     
-#Import Fornecedor x UF (FAT, RL, MB, MC) da base orcamento original (OCD). Salva no dataset = DIVFRN_UF_FIL_CNL
-DIVFRN_UF_FIL_CNL = pd.read_feather(caminho + 'bd/DIVFRN_UF_FIL_CNL.ft')
+#Import datasets 
+DIVFRN_UF_FIL_CNL = pd.read_feather(caminho + 'bd/DIVFRN_UF_FIL_CNL.ft') #Fornecedor x UF (FAT, RL, MB, MC) da base orcamento original (OCD). Salva no dataset = DIVFRN_UF_FIL_CNL
+DIMFRN = pd.read_feather(caminho + 'bd/DIMFRN.ft') #Usado para relacionar a divisao do fornecedor com a descricao da celula e diretoria
 
 #Import arquivo com meta definida por Fornecedor, Filial e UF. Salva dados no dataset = FRNFILUF_POP
 arquivo = caminho + 'Faturamento Compras POP.xlsx'
@@ -41,13 +42,6 @@ print(confere.to_markdown(headers=('DIRETORIA','FAT'), tablefmt='github', floatf
 
 #Agrupa meta POP fornecedor x UF e salva no dataset = AJT_FRNUF
 AJT_FRNUF = FRNFILUF_POP.groupby(['CODDIVFRN', 'CODESTCLI', 'CODFILEPD', 'DESTIPCNLVNDOMR'])[['POP']].sum().reset_index()
-
-### ALTERAR (PEGAR A DESCRICAO DA CELULA DA MESMA FONTE USADA NA CONSULTA DO ORCADO ORIGINAL DWH.DIMPRD WHERE CODSUBTIPPRD = 'DIVFRN')
-#Usar a descricao do arquivo pode gerar erro (na carga de junho a celula LINHA MARROM foi alterada para comprador FERNANDO e no arquivo continuou com nome antigo gerando distorcao no alinhamento da etapa seguinte) 
-#Pega descricao de Diretoria e Celula do arquivo
-DescricaoPOP = FRNFILUF_POP.drop_duplicates(['DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN'])[['DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN']]
-###
-
 AJT_FRNUF.columns = ['CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR', 'FAT']
 
 #junta registros do POP com OCD (Planejamento Operacional com Orcado Original) e salva no dataset = OMR_FRNUF_A
@@ -56,7 +50,7 @@ OMR_FRNUF_A = pd.merge(AJT_FRNUF, DIVFRN_UF_FIL_CNL, how='left', on=['CODDIVFRN'
 #filtra registros POP sem OCD (Fornecedor x UF). Salva no Dataset = OMR_FRNUF_null
 OMR_FRNUF_null = OMR_FRNUF_A[['CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR', 'FAT', 'i']].query('i=="left_only"')
 #Inclui despcricao da Diretoria e da Celula quando nao existe registro no OCD
-OMR_FRNUF_null = pd.merge(DescricaoPOP, OMR_FRNUF_null, how='inner', on='CODDIVFRN')
+OMR_FRNUF_null = pd.merge(DIMFRN, OMR_FRNUF_null, how='inner', on='CODDIVFRN')
 
 #filtra registros comuns POP com OCD (Fornecedor x UF) e salva no dataset = OMR_FRNUF_A
 OMR_FRNUF_A = OMR_FRNUF_A.query('i!="left_only"')

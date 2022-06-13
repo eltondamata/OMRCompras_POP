@@ -69,6 +69,7 @@ dffto['DESTIPCNLVNDOMR'] = dffto['DESTIPCNLVNDOMR'].replace({'E-FÁCIL': 'EFACIL
 dffto['NOMMES'] = dffto['NUMMESOCD'].map(dic_NUMMES)
 
 dfrlc = pd.read_feather(arquivo_ft)
+dfrlc = dfrlc.groupby(['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODFRN', 'CODESTUNI', 'DESTIPCNLVNDOMR'])[['VLRVNDFATLIQ','VLRRCTLIQAPU','VLRMRGBRT','VLRMRGCRB']].sum().reset_index() #agrupa sem considerar a filial (CODFILEPD), desabilitar essa linha apos inclusao da filial na tabela de carga (solicitado para TI)
 frncel = pd.read_feather(frncel_ft)
 frncel.columns = ['CODFRN', 'DESDRTCLLATU', 'DESCLLCMPATU']
 

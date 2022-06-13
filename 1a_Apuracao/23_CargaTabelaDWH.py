@@ -16,6 +16,7 @@ with open('../Parametros/caminho.txt','r') as f:
 start = time.strftime("%b %d %Y %H:%M:%S")
 arquivo_ft = caminho + 'bd/RLCOMRCMPOCDOPE_CARGA.ft'
 df = pd.read_feather(arquivo_ft)
+df = df.groupby(['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODFRN', 'CODESTUNI', 'DESTIPCNLVNDOMR'])[['VLRVNDFATLIQ','VLRRCTLIQAPU','VLRMRGBRT','VLRMRGCRB']].sum().reset_index() #agrupa sem considerar a filial (CODFILEPD), desabilitar essa linha apos inclusao da filial na tabela de carga (solicitado para TI)
 
 #Filtra os meses e cenarios que estao no arquivos (usado para deletar os registros do DWH)
 DELETAR = df[['NOMMES']].drop_duplicates()

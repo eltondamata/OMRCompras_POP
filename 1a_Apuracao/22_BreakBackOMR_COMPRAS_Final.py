@@ -31,12 +31,17 @@ df = pd.melt(
 #importa base completa OMR_COMPRAS
 df_full = pd.read_feather(caminho + 'bd/OMR_COMPRAS_POPAJT.ft')
 df_full = pd.melt(
-	df_full, id_vars=['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'CODESTUNI', 'DESTIPCNLVNDOMR', 'DESCTGPRD', 'DESDRTCLLATU'],
+	df_full, id_vars=['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR', 'DESCTGPRD', 'DESDRTCLLATU'],
 	value_vars=['VLRVNDFATLIQ','VLRRCTLIQAPU','VLRMRGBRT', 'VLRCSTMC'],
 	var_name='MEDIDA',
 	value_name='DRIVER')
 print('\n', "BASE COMPLETA ANTES DO BREAKBACK")
-print(df_full.pivot_table(index=['DESDRTCLLATU','MEDIDA'], values='DRIVER', aggfunc=sum).unstack().to_string())
+confere = pd.pivot_table(df_full, values='DRIVER', index=['DESDRTCLLATU'],  columns=['MEDIDA'], aggfunc=sum)
+confere.loc['TOTAL'] = confere.sum(axis=0)
+confere = confere.reset_index()
+confere = confere[['DESDRTCLLATU', 'VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRCSTMC']]
+print(confere.to_markdown(index=False, tablefmt='github', floatfmt=',.2f', numalign='right'))
+#print(df_full.pivot_table(index=['DESDRTCLLATU','MEDIDA'], values='DRIVER', aggfunc=sum).unstack().to_string())
 
 #Base Completa após Distribuir o valor de DIRETORIA x CATEGORIA x FORN na base completa
 df_full['DRIVER'] = (df_full['DRIVER'] / df_full.groupby(['DESDRTCLLATU','DESCTGPRD','DESDIVFRN','MEDIDA'])['DRIVER'].transform('sum'))
@@ -44,7 +49,12 @@ df_full = df_full.merge(df, how='inner', on=['DESDRTCLLATU','DESCTGPRD','DESDIVF
 df_full['DRIVER'] = df_full['DRIVER'] * df_full['VALOR']
 del df_full['VALOR']
 print('\n', "BASE COMPLETA APOS DISTRIBUIR DIRETORIA x CATEGORIA X FORN")
-print(df_full.pivot_table(index=['DESDRTCLLATU','MEDIDA'], values='DRIVER', aggfunc=sum).unstack().to_string())
+confere = pd.pivot_table(df_full, values='DRIVER', index=['DESDRTCLLATU'],  columns=['MEDIDA'], aggfunc=sum)
+confere.loc['TOTAL'] = confere.sum(axis=0)
+confere = confere.reset_index()
+confere = confere[['DESDRTCLLATU', 'VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRCSTMC']]
+print(confere.to_markdown(index=False, tablefmt='github', floatfmt=',.2f', numalign='right'))
+#print(df_full.pivot_table(index=['DESDRTCLLATU','MEDIDA'], values='DRIVER', aggfunc=sum).unstack().to_string())
 
 #Agrupa valores da Planilha em Diretoria x Categoria
 df_drtctg = df.groupby(['DESDRTCLLATU','DESCTGPRD','MEDIDA'])['VALOR'].sum()
@@ -65,7 +75,9 @@ df_uf = pd.melt(
 	value_name='VALOR')
 df_uf['VALOR'] = df_uf['VALOR'].mul(1000)
 print('\n', "PLANILHA DE CONTRIBUICAO POR ESTADO")
-print(df_uf.pivot_table(index=['MEDIDA'], values='VALOR', aggfunc=sum).unstack().unstack().to_string())
+confere = df_uf.pivot_table(index=['MEDIDA'], values='VALOR', aggfunc=sum).unstack().unstack().reset_index()
+confere = confere[['index', 'VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRCSTMC']]
+print(confere.to_markdown(index=False, tablefmt='github', floatfmt=',.2f', numalign='right'))
 
 #importa planilha por Tipo Canal
 df_tipcnl = pd.read_excel(caminho + 'POP_TIPCNLVND.xlsx', 'POP_TIPCNLVND', usecols = "A:F")
@@ -76,9 +88,14 @@ df_tipcnl = pd.melt(
 	value_name='VALOR')
 #df_tipcnl['VALOR'] = df_tipcnl['VALOR'].mul(1000)
 print('\n', "POP_TIPCNLVND.xlsx")
-print(df_tipcnl.pivot_table(index=['MEDIDA'], values='VALOR', aggfunc=sum).unstack().unstack().to_string())
+confere = pd.pivot_table(df_tipcnl, values='VALOR', index=['DESTIPCNLVNDOMR'],  columns=['MEDIDA'], aggfunc=sum)
+confere.loc['TOTAL'] = confere.sum(axis=0)
+confere = confere.reset_index()
+confere = confere[['DESTIPCNLVNDOMR', 'VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRCSTMC']]
+print(confere.to_markdown(index=False, tablefmt='github', floatfmt=',.2f', numalign='right'), '\n')
 
 #INICIO BREAKBACK
+print('==> INICIO BreakBack')
 for x in range(50):
 	#Distribui o valor de ESTADO
 	df_full['DRIVER'] = (np.float64(df_full['DRIVER']) / df_full.groupby(['CODESTUNI','MEDIDA'])['DRIVER'].transform('sum'))
@@ -104,19 +121,20 @@ for x in range(50):
 	df_full['DRIVER'] = df_full['DRIVER'] * df_full['VALOR']
 	del df_full['VALOR']
 
+print('==> FIM BreakBack', '\n')
 print('\n', "==> PLANILHA CONTRIBUICAO DIRETORIA X CATEGORIA X FORN")
 confere = df.pivot_table(index=['DESDRTCLLATU','MEDIDA'], values='VALOR', aggfunc=sum).unstack()
 confere.columns = confere.columns.get_level_values(1)
 confere.loc[:,'MC'] = confere['VLRMRGBRT'] + confere['VLRCSTMC']
 confere.loc['TOTAL',:] = confere.sum()
-print(confere[['VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRCSTMC', 'MC']].to_string())
+print(confere[['VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRCSTMC', 'MC']].to_markdown(tablefmt='github', floatfmt=',.2f', numalign='right'))
 
 print('\n', "==> BASE CARGA POR DIRETORIA")
 confere2 = df_full.pivot_table(index=['DESDRTCLLATU','MEDIDA'], values='DRIVER', aggfunc=sum).unstack()
 confere2.columns = confere2.columns.get_level_values(1)
 confere2.loc[:,'MC'] = confere2['VLRMRGBRT'] + confere2['VLRCSTMC']
 confere2.loc['TOTAL',:] = confere2.sum()
-print(confere2[['VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRCSTMC', 'MC']].to_string())
+print(confere2[['VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRCSTMC', 'MC']].to_markdown(tablefmt='github', floatfmt=',.2f', numalign='right'))
 
 #CATEGORIA X FORNECEDOR
 confere5 = df_full.pivot_table(index=['DESDRTCLLATU', 'DESCTGPRD', 'DESDIVFRN', 'MEDIDA'], values='DRIVER', aggfunc=sum).unstack()
@@ -124,20 +142,21 @@ confere5.columns = confere5.columns.get_level_values(1)
 confere5.loc[:,'MC'] = confere5['VLRMRGBRT'] + confere5['VLRCSTMC']
 
 #Gera dataset OMR_COMPRAS_Final
-df_full = df_full.pivot_table(index=['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'CODESTUNI', 'DESTIPCNLVNDOMR', 'DESCTGPRD', 'DESDRTCLLATU'], columns=['MEDIDA'], values='DRIVER', aggfunc=sum).reset_index()
+df_full = df_full.pivot_table(index=['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR', 'DESCTGPRD', 'DESDRTCLLATU'], columns=['MEDIDA'], values='DRIVER', aggfunc=sum).reset_index()
 df_full = df_full.query('VLRVNDFATLIQ>0')
 df_full.eval('VLRMRGCRB=VLRMRGBRT+VLRCSTMC', inplace=True)
 df_full.reset_index(drop=True, inplace=True)
 df_full.to_feather(caminho + 'bd/OMR_COMPRAS_Final.ft')
 
 #Gera arquivo formato tabela de carga dwh.RLCOMRCMPOCDOPE
-df_full = df_full.groupby(['NOMMES','CODGRPPRD','CODCTGPRD','CODSUBCTGPRD','CODDIVFRN','CODESTUNI','DESTIPCNLVNDOMR'])[['VLRVNDFATLIQ','VLRRCTLIQAPU','VLRMRGBRT','VLRMRGCRB']].sum().reset_index()
+df_full = df_full.groupby(['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR'])[['VLRVNDFATLIQ','VLRRCTLIQAPU','VLRMRGBRT','VLRMRGCRB']].sum().reset_index()
 df_full.rename(columns={'CODDIVFRN':'CODFRN'}, inplace=True)
 
 print('\n', "==> BASE CARGA POR TIPO DE CANAL")
 confere3 = df_full.groupby(['DESTIPCNLVNDOMR'])[['VLRVNDFATLIQ','VLRRCTLIQAPU','VLRMRGBRT','VLRMRGCRB']].sum()
+confere3.eval('VLRCSTMC=VLRMRGCRB-VLRMRGBRT', inplace=True)
 confere3.loc['TOTAL',:] = confere3.sum()
-print(confere3.to_string())
+print(confere3.to_markdown(tablefmt='github', floatfmt=',.2f', numalign='right'))
 
 print('\n', "TABELA DE CARGA")
 print(df_full.nlargest(5, 'VLRVNDFATLIQ').to_string(index=False),'\n')
@@ -220,9 +239,9 @@ dfxls.to_excel(writer, sheet_name=planilha, startcol=0, startrow=9, header=True,
 
 writer.save()
 book.close()
-
-df_full.to_feather(caminho + 'bd/RLCOMRCMPOCDOPE_CARGA.ft')
-
 print("Confere_CARGARLC.xlsx atualizado!")
+
+#Export dataset de carga OMR_Compras
+df_full.to_feather(caminho + 'bd/RLCOMRCMPOCDOPE_CARGA.ft')
 print("Dataset gerado: OMR_COMPRAS_Final.ft")
 print("Dataset gerado: RLCOMRCMPOCDOPE_CARGA.ft")

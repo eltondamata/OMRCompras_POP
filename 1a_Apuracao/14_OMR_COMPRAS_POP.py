@@ -118,22 +118,35 @@ BDCPL.columns = BDCPL.columns.get_level_values(1).rename('')
 BDCPL = BDCPL.reset_index()
 BDCPL['VLRMRGCRB'] = BDCPL['VLRMRGBRT'] + BDCPL['VLRCSTMC']
 
-#Conferencia total UF
-pd.options.display.float_format = '{:,.2f}'.format
-dfufori = OMR_FRNUFCNL.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['CODESTUNI'])['VALOR'].sum()
-dfuffim = BDCPL.groupby(['CODESTUNI'])['VLRVNDFATLIQ'].sum()
-print('Conferencia Faturamento por UF')
-totuf = pd.merge(dfufori, dfuffim, how='inner', on='CODESTUNI').reset_index()
-totuf.columns = ['CODESTUNI', 'FAT ORIGEM', 'FAT FINAL']
-print(totuf,'\n')
-
 #Conferencia total Filial
 pd.options.display.float_format = '{:,.2f}'.format
 dfufori = OMR_FRNUFCNL.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['CODFILEPD'])['VALOR'].sum()
 dfuffim = BDCPL.groupby(['CODFILEPD'])['VLRVNDFATLIQ'].sum()
-print('Conferencia Faturamento por Filial -- (Nao tem que bater, apenas aproxima)')
-totuf = pd.merge(dfufori, dfuffim, how='inner', on='CODFILEPD').reset_index()
+print('Conferencia Faturamento por Filial -- (Tem que bater apenas no total, por filial apenas aproxima)')
+totuf = pd.merge(dfufori, dfuffim, how='inner', on='CODFILEPD')
+totuf.loc['TOTAL'] = totuf.sum(axis=0, numeric_only=True)
+totuf = totuf.reset_index()
 totuf.columns = ['CODFILEPD', 'FAT ORIGEM', 'FAT FINAL']
+print(totuf,'\n')
+
+#Conferencia total FORNECEDOR (Top 20)
+dfori = OMR_FRNUFCNL.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['CODDIVFRN'])['VALOR'].sum().reset_index()
+dffim = BDCPL.groupby(['CODDIVFRN','DESDIVFRN'])['VLRVNDFATLIQ'].sum().reset_index()
+print('Conferencia Faturamento por FORNECEDOR (TOP 20) -- Nao tem objetivo de bater, apenas aproximar do valor original')
+print('Divergencia por fornecedor ocorre quando é definido meta para fornecedor sem referencia historica, processo alinha no total da celula e distribui diferença para todos os fornecedores')
+dftot = pd.merge(dfori, dffim, how='inner', on='CODDIVFRN').reset_index()[['CODDIVFRN', 'DESDIVFRN', 'VALOR', 'VLRVNDFATLIQ']]
+dftot.columns = ['CODDIVFRN', 'DESDIVFRN', 'FAT ORIGEM', 'FAT FINAL']
+print(dftot.sort_values(by='FAT FINAL', ascending=False).head(20),'\n')
+
+#Conferencia total UF
+pd.options.display.float_format = '{:,.2f}'.format
+dfufori = OMR_FRNUFCNL.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['CODESTUNI'])['VALOR'].sum()
+dfuffim = BDCPL.groupby(['CODESTUNI'])['VLRVNDFATLIQ'].sum()
+print('Conferencia Faturamento por UF -- (TEM QUE BATER)')
+totuf = pd.merge(dfufori, dfuffim, how='inner', on='CODESTUNI')
+totuf.loc['TOTAL'] = totuf.sum(axis=0, numeric_only=True)
+totuf = totuf.reset_index()
+totuf.columns = ['CODESTUNI', 'FAT ORIGEM', 'FAT FINAL']
 print(totuf,'\n')
 
 #Conferencia total CELULA
@@ -155,15 +168,6 @@ totuf.loc['TOTAL'] = totuf.sum(axis=0, numeric_only=True)
 totuf = totuf.reset_index()
 totuf.columns = ['DESTIPCNLVNDOMR', 'FAT ORIGEM', 'FAT FINAL']
 print(totuf.to_markdown(index=False, tablefmt='github', floatfmt=',.2f', numalign='right'),'\n')
-
-#Conferencia total FORNECEDOR (Top 20)
-dfori = OMR_FRNUFCNL.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['CODDIVFRN'])['VALOR'].sum().reset_index()
-dffim = BDCPL.groupby(['CODDIVFRN','DESDIVFRN'])['VLRVNDFATLIQ'].sum().reset_index()
-print('Conferencia Faturamento por FORNECEDOR (TOP 20) -- Nao tem objetivo de bater, apenas aproximar do valor original')
-print('Divergencia por fornecedor ocorre quando é definido meta para fornecedor sem referencia historica, processo alinha no total da celula e distribui diferença para todos os fornecedores')
-dftot = pd.merge(dfori, dffim, how='inner', on='CODDIVFRN').reset_index()[['CODDIVFRN', 'DESDIVFRN', 'VALOR', 'VLRVNDFATLIQ']]
-dftot.columns = ['CODDIVFRN', 'DESDIVFRN', 'FAT ORIGEM', 'FAT FINAL']
-print(dftot.sort_values(by='FAT FINAL', ascending=False).head(20),'\n')
 
 #Export dataset OMR_COMPRAS_POP (Meta POP aberta em todas as dimensoes do OMR_Compras)
 BDCPL.to_feather(caminho + 'bd/OMR_COMPRAS_POP.ft')

@@ -137,6 +137,24 @@ SELECT {NUMANOMESOCD} AS NUMANOMESOCD,
                t4.CODCNOOCD
   """)
 BSEINIRLZ = pd.read_sql(mysql, con=conn)
+
+#Cadastro Fornecedor x Celula x Diretoria
+mysql = ("""     
+   SELECT CODDIVFRN, 
+          DESDIVFRN, 
+          NOMGRPECOFRN, 
+          CODDRTCLLATU, 
+          DESDRTCLLATU, 
+          DESCLLCMPATU, 
+          DATATURGT
+      FROM DWH.DIMPRD
+      WHERE CODSPRTIPPRD = 'DIVFRN'
+      ORDER BY DATATURGT DESC
+  """)
+dimfrn = pd.read_sql(mysql, con=conn)
+dimfrn = dimfrn.set_index('CODDIVFRN')
+dimfrn = dimfrn.loc[~dimfrn.index.duplicated(keep='first')]
+dimfrn = dimfrn.iloc[:,:-1].reset_index() #não pegar a última coluna
 conn.close()
 
 key = 'CODDRTCLLATU CODGRPPRD CODCTGPRD CODDIVFRN CODFILEPD'.split()
@@ -169,5 +187,7 @@ print('NUMANOMES:', NUMANOMESOCD)
 print(OMR_COMPRAS_OCD[valores].sum().to_markdown(tablefmt='plsql', floatfmt=',.2f'))
 #print(DIVFRN_UF_CNL[valores].sum().to_markdown(tablefmt='plsql', floatfmt=',.2f'))
 
+#Export datasets
 OMR_COMPRAS_OCD.to_feather(caminho + 'bd/OMR_COMPRAS_OCD.ft')
 DIVFRN_UF_FIL_CNL.to_feather(caminho + 'bd/DIVFRN_UF_FIL_CNL.ft')
+dimfrn.to_feather(caminho + 'bd/DIMFRN.ft')
