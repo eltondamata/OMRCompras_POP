@@ -1,174 +1,92 @@
-#elton.mata@martins.com.br
-#Objetivo: Distribuir a meta (FAT, RL, MB, MC) definida por Fornecedor e UF no processo anterior para todas as dimensoes do OMR Compras
-#distribuicao proporcional ao valor orcado original = OCD
+'''
+Autor: elton.mata@martins.com.br
+Objetivo: Distribuir a meta (FAT, RL, MB, MC) definida por "Fornecedor x UF x Filial x Canal" no processo anterior para todas as dimensoes do OMR Compras
+Dimensoes adicionais no OMR Compras: Categoria > Sub-Categoria
+distribuicao proporcional ao valor orcado original = OCD
+quando não existe combinacao no OCD, distribui para todas as categorias do fornecedor que estão na base do OMR_COMPRAS_OCD.ft
+quando não existe o fornecedor na base OMR_COMPRAS_OCD.ft, associa a meta para a primeira categoria do fornecedor no cadastro de produtos
+'''
 
 import pandas as pd
+import numpy as np
+pd.options.display.float_format = '{:,.2f}'.format
 
 with open('../Parametros/caminho.txt','r') as f:
     caminho = f.read()
     
-BDCPL = pd.read_feather(caminho + 'bd/OMR_COMPRAS_OCD.ft')
-OMR_FRNUFCNL = pd.read_feather(caminho + 'bd/OMR_FRNUFCNL_POP.ft')
+BDCPL = pd.read_feather(caminho + 'bd/OMR_COMPRAS_OCD.ft') #['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'NOMGRPECOFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR', 'DESCTGPRD', 'CODDRTCLLATU', 'DESDRTCLLATU', 'DESCLLCMPATU', 'CODCNOOCD', 'VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB', 'VLRCSTMC']
+OMR_FRNUFCNL = pd.read_feather(caminho + 'bd/OMR_FRNUFCNL_POP.ft') #['DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR', 'VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB', 'VLRCSTMC']
 OMR_FRN_FIL = pd.read_feather(caminho + 'bd/OMR_FRN_FIL_POP.ft')
 OMR_CODESTUNI = pd.read_feather(caminho + 'bd/OMR_CODESTUNI_POP.ft')
+DIMFRNCTG = pd.read_feather(caminho + 'bd/DIMFRNCTG.ft')
 
-valores = ['VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRCSTMC']
+#Caluculo subcategoria = percentual de participação da subcategoria no cruzamento (Forn x UF x Filial x Canal) (soma de uma subcategoria no cruzamento(Forn x UF x Filial x Canal) = 1)
+#'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR'
+medidas = ['VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB', 'VLRCSTMC']
+DrillSubCategoria = BDCPL[['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR']].drop_duplicates()
+for medida in medidas:
+    DrillMedida = BDCPL.groupby(['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR'])[[medida]].sum().reset_index()
+    DrillMedida[f'PTC_{medida}'] = (np.float64(DrillMedida[medida]) / DrillMedida.groupby(['NOMMES', 'CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR'])[medida].transform('sum'))
+    DrillMedida[f'PTC_{medida}'] = DrillMedida[f'PTC_{medida}'].fillna(1)
+    del DrillMedida[medida]
+    DrillSubCategoria = pd.merge(DrillSubCategoria, DrillMedida)
 
-#Base completa OMR_COMPRAS
-BDCPL = pd.melt(
-	BDCPL, id_vars=['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'NOMGRPECOFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR', 'DESCTGPRD', 'DESDRTCLLATU', 'DESCLLCMPATU'],
-	value_vars=valores,
-	var_name='MEDIDA',
-	value_name='DRIVER')
-#print('\n', "OMR_COMPRAS OCD -- Fonte: Base Completa")
-#confere = BDCPL.pivot_table(index=['DESDRTCLLATU','MEDIDA'], values='DRIVER', aggfunc=sum)
-#print(confere.unstack().to_markdown(tablefmt='github', floatfmt=',.2f'))
-#print(confere.pivot_table(index=['MEDIDA'], values='DRIVER', aggfunc=sum).transpose().to_markdown(tablefmt='github', floatfmt=',.2f'),'\n')
+#confere = DrillSubCategoria.groupby(['CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR'])[['PTC_VLRCSTMC']].sum()
+#confere.describe()
 
-#OMR Fornecedor x UF
-OMR_FRNUFCNL = pd.melt(
-	OMR_FRNUFCNL, id_vars=['DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR'],
-	value_vars=valores,
-	var_name='MEDIDA',
-	value_name='VALOR')
-print("OMR Fornecedor x UF POP -- Fonte: Arquivo de Vendas após abertura RL MB e MC")
-confere = OMR_FRNUFCNL.pivot_table(index=['DESDRTCLLATU','MEDIDA'], values='VALOR', aggfunc=sum)
-print(confere.unstack().to_markdown(tablefmt='github', floatfmt=',.2f'))
-print(confere.pivot_table(index=['MEDIDA'], values='VALOR', aggfunc=sum).transpose().to_markdown(tablefmt='github', floatfmt=',.2f'),'\n')
+#Calculo Valor FAT, RL, MB, MC subcategoria na base OMR Compras (Quando a combinacao(Forn x UF x Filial x Canal) existir na base) -- Distribui para as categorias faturadas na combinacao (Forn x UF x Filial x Canal)
+dfA = pd.merge(OMR_FRNUFCNL, DrillSubCategoria, how='inner', on=['CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR'])
+for medida in medidas: 
+    dfA[medida] = dfA[medida] * dfA[f'PTC_{medida}']
+dfA = dfA[['NOMMES', 'CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB', 'VLRCSTMC']]
+    
+#Calculo Valor FAT, RL, MB, MC subcategoria na base OMR Compras (Quando a combinacao(Forn x UF x Filial x Canal) NAO existir na base) -- Distribui para todas as categorias do fornecedor
+diff = pd.merge(OMR_FRNUFCNL, DrillSubCategoria[['CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR']],  indicator='i', how='outer', on=['CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR']).query('i == "left_only"').drop('i', 1)    
 
-#OMR Fornecedor x Filial
-OMR_FRN_FIL = pd.melt(
-	OMR_FRN_FIL, id_vars=['CODDIVFRN', 'CODFILEPD'],
-	value_vars=valores,
-	var_name='MEDIDA',
-	value_name='VALOR')
-#print("OMR Fornecedor POP")
-#confere = OMR_FRN.pivot_table(index=['MEDIDA'], values='VALOR', aggfunc=sum)
-#print(confere.transpose().to_markdown(tablefmt='github', floatfmt=',.2f'),'\n')
+DrillSubCategoria2 = BDCPL[['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN']].drop_duplicates()
+for medida in medidas:
+    DrillMedida2 = BDCPL.groupby(['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN'])[[medida]].sum().reset_index()
+    DrillMedida2[f'PTC_{medida}'] = (np.float64(DrillMedida2[medida]) / DrillMedida2.groupby(['NOMMES', 'CODDIVFRN'])[medida].transform('sum'))
+    DrillMedida2[f'PTC_{medida}'] = DrillMedida2[f'PTC_{medida}'].fillna(1)
+    del DrillMedida2[medida]
+    DrillSubCategoria2 = pd.merge(DrillSubCategoria2, DrillMedida2)
 
-#OMR Estado
-OMR_CODESTUNI = pd.melt(
-	OMR_CODESTUNI, id_vars=['CODESTUNI'],
-	value_vars=valores,
-	var_name='MEDIDA',
-	value_name='VALOR')
-#print("OMR Estado POP")
-#confere = OMR_CODESTUNI.pivot_table(index=['MEDIDA'], values='VALOR', aggfunc=sum)
-#print(confere.transpose().to_markdown(tablefmt='github', floatfmt=',.2f'),'\n')
+dfB = pd.merge(diff, DrillSubCategoria2, how='inner', on=['CODDIVFRN'])
+for medida in medidas: 
+    dfB[medida] = dfB[medida] * dfB[f'PTC_{medida}']
+dfB = dfB[['NOMMES', 'CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB', 'VLRCSTMC']]
 
+#Unifica dfA, dfB
+dffim = pd.concat([dfA, dfB])
 
-#Base Completa após Distribuir Fornecedor x UF x Filial
-dimensoes = ['DESDRTCLLATU', 'DESCLLCMPATU', 'CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR', 'MEDIDA']
-BDCPL['DRIVER'] = (BDCPL['DRIVER'] / BDCPL.groupby(dimensoes)['DRIVER'].transform('sum'))
-BDCPL = BDCPL.merge(OMR_FRNUFCNL, how='inner', on=dimensoes)
-BDCPL['DRIVER'] = BDCPL['DRIVER'] * BDCPL['VALOR']
-del BDCPL['VALOR']
-#print('\n', "ATENCAO == OMR Compras POP -- após distribuir Proposta de Vendas na Base Completa")
-#confere = BDCPL.pivot_table(index=['DESDRTCLLATU','MEDIDA'], values='DRIVER', aggfunc=sum)
-#print(confere.unstack().to_markdown(tablefmt='github', floatfmt=',.2f'))
-#print(confere.pivot_table(index=['MEDIDA'], values='DRIVER', aggfunc=sum).transpose().to_markdown(tablefmt='github', floatfmt=',.2f'),'\n')
+#Atribui -1=NA para as subcategorias que estão no arquivo de vendas e não há referencia na base completa do OMR_Compras
+diff2 = pd.merge(OMR_FRNUFCNL, dffim[['CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR']],  indicator='i', how='outer', on=['CODDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR']).query('i == "left_only"').drop('i', 1)
 
-print('Calculando Breakback DIVFRN CELULA e UF, AGUARDE...')
-#BREAKBACK DIVFRN e UF
-for x in range(5):
-	#Distribui ESTADO
-	dimensoes = ['CODESTUNI', 'MEDIDA']
-	BDCPL['DRIVER'] = (BDCPL['DRIVER'] / BDCPL.groupby(dimensoes)['DRIVER'].transform('sum'))
-	BDCPL = BDCPL.merge(OMR_CODESTUNI, how='inner', on=dimensoes)
-	BDCPL['DRIVER'] = BDCPL['DRIVER'] * BDCPL['VALOR']
-	del BDCPL['VALOR']
+#Incluir descricoes no dataset
+dimcompras = BDCPL[['CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'NOMGRPECOFRN', 'DESCTGPRD', 'DESDRTCLLATU', 'DESCLLCMPATU']].drop_duplicates()
+dffim = pd.merge(dffim, dimcompras)
+dffim = dffim[['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'NOMGRPECOFRN', 'DESDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR', 'DESCTGPRD', 'DESDRTCLLATU', 'DESCLLCMPATU', 'VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB', 'VLRCSTMC']]
 
-	#Distribui FORNECEDOR x FILIAL
-	dimensoes = ['CODDIVFRN', 'CODFILEPD', 'MEDIDA']
-	BDCPL['DRIVER'] = (BDCPL['DRIVER'] / BDCPL.groupby(dimensoes)['DRIVER'].transform('sum'))
-	BDCPL = BDCPL.merge(OMR_FRN_FIL, how='inner', on=dimensoes)
-	BDCPL['DRIVER'] = BDCPL['DRIVER'] * BDCPL['VALOR']
-	del BDCPL['VALOR']
-#print('\n', "OMR Compras POP -- após BREAKBACK alinhamento DIVFRN e UF")
-#confere = BDCPL.pivot_table(index=['DESDRTCLLATU','MEDIDA'], values='DRIVER', aggfunc=sum)
-#print(confere.unstack().to_markdown(tablefmt='github', floatfmt=',.2f'))
-#print(confere.pivot_table(index=['MEDIDA'], values='DRIVER', aggfunc=sum).transpose().to_markdown(tablefmt='github', floatfmt=',.2f'),'\n')
+#Inclusao dos fornecedores sem referencia de categoria no OMR_Compras (Usa a primeira categoria relacionada ao fornecedor no cadastro de produtos)
+DIMFRNCTG = DIMFRNCTG.query('CODSUBCTGPRD!=-1')
+DIMFRNCTG = DIMFRNCTG.set_index(['CODDIVFRN'])
+DIMFRNCTG = DIMFRNCTG.loc[~DIMFRNCTG.index.duplicated(keep='first')]
+DIMFRNCTG = DIMFRNCTG.reset_index()
+diff2 = pd.merge(diff2, DIMFRNCTG)
+diff2.insert(0, 'NOMMES', list(BDCPL['NOMMES'])[0])
+diff2 = diff2[['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'NOMGRPECOFRN', 'DESDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR', 'DESCTGPRD', 'DESDRTCLLATU', 'DESCLLCMPATU', 'VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB', 'VLRCSTMC']]
+dffim = pd.concat([dffim, diff2])
+dffim.reset_index(drop=True, inplace=True)
 
-#BREAKBACK CELULA e UF
-#Objetivo alinhar o total da celula e total do estado (distribui as diferencas nos cruzamentos)
-OMR_CEL = OMR_FRNUFCNL.groupby(['DESCLLCMPATU', 'DESTIPCNLVNDOMR','MEDIDA'])[['VALOR']].sum().reset_index()
-for x in range(50):
-	#Distribui ESTADO
-	dimensoes = ['CODESTUNI', 'MEDIDA']
-	BDCPL['DRIVER'] = (BDCPL['DRIVER'] / BDCPL.groupby(dimensoes)['DRIVER'].transform('sum'))
-	BDCPL = BDCPL.merge(OMR_CODESTUNI, how='inner', on=dimensoes)
-	BDCPL['DRIVER'] = BDCPL['DRIVER'] * BDCPL['VALOR']
-	del BDCPL['VALOR']
+#Confere
+print('Confere meta total -- Diferença deve ser zero')
+confere = pd.DataFrame(OMR_FRNUFCNL[medidas].sum())
+confere.columns = ['Arquivo_Vendas']
+confere2 = pd.DataFrame(dffim[medidas].sum())
+confere2.columns = ['OMR_Compras']
+conferefim = confere.join(confere2)
+conferefim.eval('Diferenca=OMR_Compras-Arquivo_Vendas', inplace=True)
+print(conferefim.to_markdown(tablefmt='github', floatfmt=',.2f', numalign='right'), '\n')
 
-	#Distribui CELULA X CANAL
-	dimensoes = ['DESCLLCMPATU', 'DESTIPCNLVNDOMR', 'MEDIDA']
-	BDCPL['DRIVER'] = (BDCPL['DRIVER'] / BDCPL.groupby(dimensoes)['DRIVER'].transform('sum'))
-	BDCPL = BDCPL.merge(OMR_CEL, how='inner', on=dimensoes)
-	BDCPL['DRIVER'] = BDCPL['DRIVER'] * BDCPL['VALOR']
-	del BDCPL['VALOR']
-#print('\n', "OMR Compras POP -- após BREAKBACK CELULA e UF")
-print('\n', "OMR Compras POP -- BASE FINAL CALCULADA")
-confere = BDCPL.pivot_table(index=['DESDRTCLLATU','MEDIDA'], values='DRIVER', aggfunc=sum)
-print(confere.unstack().to_markdown(tablefmt='github', floatfmt=',.2f'))
-print(confere.pivot_table(index=['MEDIDA'], values='DRIVER', aggfunc=sum).transpose().to_markdown(tablefmt='github', floatfmt=',.2f'),'\n')
-
-#Gera arquivo formato tabela de carga dwh.RLCOMRCMPOCDOPE
-BDCPL = BDCPL.pivot_table(index=['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'NOMGRPECOFRN', 'DESDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR', 'DESCTGPRD', 'DESDRTCLLATU', 'DESCLLCMPATU', 'MEDIDA'], values='DRIVER', aggfunc=sum).unstack()
-BDCPL.columns = BDCPL.columns.get_level_values(1).rename('')
-BDCPL = BDCPL.reset_index()
-BDCPL['VLRMRGCRB'] = BDCPL['VLRMRGBRT'] + BDCPL['VLRCSTMC']
-
-#Conferencia total Filial
-pd.options.display.float_format = '{:,.2f}'.format
-dfufori = OMR_FRNUFCNL.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['CODFILEPD'])['VALOR'].sum()
-dfuffim = BDCPL.groupby(['CODFILEPD'])['VLRVNDFATLIQ'].sum()
-print('Conferencia Faturamento por Filial -- (Tem que bater apenas no total, por filial apenas aproxima)')
-totuf = pd.merge(dfufori, dfuffim, how='inner', on='CODFILEPD')
-totuf.loc['TOTAL'] = totuf.sum(axis=0, numeric_only=True)
-totuf = totuf.reset_index()
-totuf.columns = ['CODFILEPD', 'FAT ORIGEM', 'FAT FINAL']
-print(totuf,'\n')
-
-#Conferencia total FORNECEDOR (Top 20)
-dfori = OMR_FRNUFCNL.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['CODDIVFRN'])['VALOR'].sum().reset_index()
-dffim = BDCPL.groupby(['CODDIVFRN','DESDIVFRN'])['VLRVNDFATLIQ'].sum().reset_index()
-print('Conferencia Faturamento por FORNECEDOR (TOP 20) -- Nao tem objetivo de bater, apenas aproximar do valor original')
-print('Divergencia por fornecedor ocorre quando é definido meta para fornecedor sem referencia historica, processo alinha no total da celula e distribui diferença para todos os fornecedores')
-dftot = pd.merge(dfori, dffim, how='inner', on='CODDIVFRN').reset_index()[['CODDIVFRN', 'DESDIVFRN', 'VALOR', 'VLRVNDFATLIQ']]
-dftot.columns = ['CODDIVFRN', 'DESDIVFRN', 'FAT ORIGEM', 'FAT FINAL']
-print(dftot.sort_values(by='FAT FINAL', ascending=False).head(20),'\n')
-
-#Conferencia total UF
-pd.options.display.float_format = '{:,.2f}'.format
-dfufori = OMR_FRNUFCNL.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['CODESTUNI'])['VALOR'].sum()
-dfuffim = BDCPL.groupby(['CODESTUNI'])['VLRVNDFATLIQ'].sum()
-print('Conferencia Faturamento por UF -- (TEM QUE BATER)')
-totuf = pd.merge(dfufori, dfuffim, how='inner', on='CODESTUNI')
-totuf.loc['TOTAL'] = totuf.sum(axis=0, numeric_only=True)
-totuf = totuf.reset_index()
-totuf.columns = ['CODESTUNI', 'FAT ORIGEM', 'FAT FINAL']
-print(totuf,'\n')
-
-#Conferencia total CELULA
-dfori = OMR_FRNUFCNL.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['DESCLLCMPATU'])['VALOR'].sum()
-dffim = BDCPL.groupby(['DESCLLCMPATU'])['VLRVNDFATLIQ'].sum()
-print('Conferencia Faturamento por CELULA (TEM QUE BATER)')
-totuf = pd.merge(dfori, dffim, how='outer', on='DESCLLCMPATU')
-totuf.loc['TOTAL'] = totuf.sum(axis=0, numeric_only=True)
-totuf = totuf.reset_index()
-totuf.columns = ['DESCLLCMPATU', 'FAT ORIGEM', 'FAT FINAL']
-print(totuf.to_markdown(index=False, tablefmt='github', floatfmt=',.2f', numalign='right'),'\n')
-
-#Conferencia total CANAL
-dfori = OMR_FRNUFCNL.query('MEDIDA=="VLRVNDFATLIQ"').groupby(['DESTIPCNLVNDOMR'])['VALOR'].sum()
-dffim = BDCPL.groupby(['DESTIPCNLVNDOMR'])['VLRVNDFATLIQ'].sum()
-print('Conferencia Faturamento por CANAL (TEM QUE BATER)')
-totuf = pd.merge(dfori, dffim, how='inner', on='DESTIPCNLVNDOMR')
-totuf.loc['TOTAL'] = totuf.sum(axis=0, numeric_only=True)
-totuf = totuf.reset_index()
-totuf.columns = ['DESTIPCNLVNDOMR', 'FAT ORIGEM', 'FAT FINAL']
-print(totuf.to_markdown(index=False, tablefmt='github', floatfmt=',.2f', numalign='right'),'\n')
-
-#Export dataset OMR_COMPRAS_POP (Meta POP aberta em todas as dimensoes do OMR_Compras)
-BDCPL.to_feather(caminho + 'bd/OMR_COMPRAS_POP.ft')
-print('CONCLUIDO!!!')
+#Export dataset final
+dffim.to_feather(caminho + 'bd/OMR_COMPRAS_POP.ft')

@@ -155,6 +155,28 @@ dimfrn = pd.read_sql(mysql, con=conn)
 dimfrn = dimfrn.set_index('CODDIVFRN')
 dimfrn = dimfrn.loc[~dimfrn.index.duplicated(keep='first')]
 dimfrn = dimfrn.iloc[:,:-1].reset_index() #não pegar a última coluna
+
+#Cadastro Fornecedor x Categoria x Celula x Diretoria 
+mysql = ("""     
+   SELECT distinct CODDIVFRN, 
+          DESDIVFRN, 
+          NOMGRPECOFRN, 
+          CODDRTCLLATU, 
+          DESDRTCLLATU, 
+          DESCLLCMPATU,
+          CODGRPPRD,
+          CODCTGPRD,
+          CODSUBCTGPRD,
+          DESCTGPRD,
+          DATATURGT
+      FROM DWH.DIMPRD
+      WHERE CODSPRTIPPRD = 'PRD'
+      ORDER BY DATATURGT DESC
+  """)
+dimfrnctg = pd.read_sql(mysql, con=conn)
+dimfrnctg = dimfrnctg.set_index(['CODDIVFRN', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD'])
+dimfrnctg = dimfrnctg.loc[~dimfrnctg.index.duplicated(keep='first')]
+dimfrnctg = dimfrnctg.iloc[:,:-1].reset_index() #não pegar a última coluna
 conn.close()
 
 key = 'CODDRTCLLATU CODGRPPRD CODCTGPRD CODDIVFRN CODFILEPD'.split()
@@ -170,14 +192,32 @@ for i in valores:
 dic_DESTIPCNLVNDOMR = {'B2B':'OUTROS CANAIS', 'E-FÁCIL':'EFACIL'}
 BSEINIRLZi['DESTIPCNLVNDOMR'] = BSEINIRLZi['DESTIPCNLVNDOMR'].map(dic_DESTIPCNLVNDOMR).fillna(BSEINIRLZi['DESTIPCNLVNDOMR'])
 
-OMR_COMPRAS_OCD = pd.concat([BSEINIPOP.query('VLRVNDFATLIQ>0 & VLRRCTLIQAPU>0 & VLRMRGBRT>0'), BSEINIRLZi.query('VLRVNDFATLIQ>0 & VLRRCTLIQAPU>0 & VLRMRGBRT>0')])
+BASEINIPOP_MargemNegativa = BSEINIPOP.query('VLRVNDFATLIQ>0 & VLRRCTLIQAPU>0 & VLRMRGBRT<0')
+BASEINIPOP_MargemNegativa.eval('VLRCSTMC=VLRMRGCRB-VLRMRGBRT', inplace=True)
+BASEINIPOP_MargemNegativa.eval('VLRMRGBRT=VLRRCTLIQAPU*0.2', inplace=True)
+BASEINIPOP_MargemNegativa.eval('VLRMRGCRB=VLRMRGBRT+VLRCSTMC', inplace=True)
+del BASEINIPOP_MargemNegativa['VLRCSTMC']
+BSEINIPOP = BSEINIPOP.query('VLRVNDFATLIQ>0 & VLRRCTLIQAPU>0 & VLRMRGBRT>0')
+BSEINIPOP = pd.concat([BSEINIPOP, BASEINIPOP_MargemNegativa])
+
+#Incluir registros com Margem Negativa, apos ajustar a Margem para 20% (Objetivo: ter referencia para orçamento desses fornecedores, sem gerar margem negativa)
+BASEINIRLZ_MargemNegativa = BSEINIRLZi.query('VLRVNDFATLIQ>0 & VLRRCTLIQAPU>0 & VLRMRGBRT<0')
+BASEINIRLZ_MargemNegativa.eval('VLRCSTMC=VLRMRGCRB-VLRMRGBRT', inplace=True)
+BASEINIRLZ_MargemNegativa.eval('VLRMRGBRT=VLRRCTLIQAPU*0.2', inplace=True)
+BASEINIRLZ_MargemNegativa.eval('VLRMRGCRB=VLRMRGBRT+VLRCSTMC', inplace=True)
+del BASEINIRLZ_MargemNegativa['VLRCSTMC']
+BSEINIRLZi = BSEINIRLZi.query('VLRVNDFATLIQ>0 & VLRRCTLIQAPU>0 & VLRMRGBRT>0')
+BSEINIRLZi = pd.concat([BSEINIRLZi, BASEINIRLZ_MargemNegativa])
+
+#Inclui registros realizado no dataset do OMR_COMPRAS (Objetivo: ter referencia para orçar fornecedores e categorias novas)
+OMR_COMPRAS_OCD = pd.concat([BSEINIPOP, BSEINIRLZi])
 
 NOMMES = 'Jan Fev Mar Abr Mai Jun Jul Ago Set Out Nov Dez'.split()
 dic_NUMMES = dict(list(enumerate(NOMMES, start=1)))
 
 OMR_COMPRAS_OCD['NOMMES'] = OMR_COMPRAS_OCD['NUMMESOCD'].map(dic_NUMMES)
 
-OMR_COMPRAS_OCD = OMR_COMPRAS_OCD.groupby(['NOMMES','CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'NOMGRPECOFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR','DESCTGPRD', 'CODDRTCLLATU', 'DESDRTCLLATU','DESCLLCMPATU','CODCNOOCD'])[valores].sum().reset_index()
+OMR_COMPRAS_OCD = OMR_COMPRAS_OCD.groupby(['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'NOMGRPECOFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR','DESCTGPRD', 'CODDRTCLLATU', 'DESDRTCLLATU','DESCLLCMPATU','CODCNOOCD'])[valores].sum().reset_index()
 OMR_COMPRAS_OCD['VLRCSTMC'] = OMR_COMPRAS_OCD['VLRMRGCRB'] - OMR_COMPRAS_OCD['VLRMRGBRT']
 
 valores = ['VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB', 'VLRCSTMC']
@@ -191,3 +231,4 @@ print(OMR_COMPRAS_OCD[valores].sum().to_markdown(tablefmt='plsql', floatfmt=',.2
 OMR_COMPRAS_OCD.to_feather(caminho + 'bd/OMR_COMPRAS_OCD.ft')
 DIVFRN_UF_FIL_CNL.to_feather(caminho + 'bd/DIVFRN_UF_FIL_CNL.ft')
 dimfrn.to_feather(caminho + 'bd/DIMFRN.ft')
+dimfrnctg.to_feather(caminho + 'bd/DIMFRNCTG.ft') #datset usado no processo "14_OMR_COMPRAS_POP.py"
