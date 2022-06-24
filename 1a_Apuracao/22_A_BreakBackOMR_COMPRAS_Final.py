@@ -1,6 +1,9 @@
-#Gera carga OMR Compras POP com alinhamento das contribuições de CATEGORIAxFORN com ESTADO
-#Tempo processamento 52 segundos (BreakBack de 20x, Tambanho da Base Completa = 66.145 linhas)
-#log mostrado no terminal de execução e exportado para excel
+'''
+Autor: elton.mata@martins.com.br
+Processo para retorno das metas definidas no arquivo "Plan_Operacional.xlsx"
+Executar esse processo apenas caso as metas sejam definidas por esse arquivo.
+Brackback para alinhar a meta nos cruzamentos com o valor total (Categoria x Fornecedor; e Estado) definido no arquivo "Plan_Operacional.xlsx"
+'''
 
 #Importa planilhas de carga Diretoria x Categoria x Fornecedor
 import pandas as pd
@@ -31,7 +34,7 @@ df = pd.melt(
 #importa base completa OMR_COMPRAS
 df_full = pd.read_feather(caminho + 'bd/OMR_COMPRAS_POPAJT.ft')
 df_full = pd.melt(
-	df_full, id_vars=['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR', 'DESCTGPRD', 'DESDRTCLLATU'],
+    df_full, id_vars=['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'DESCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'NOMGRPECOFRN', 'DESDRTCLLATU', 'DESCLLCMPATU', 'DESTIPCNLVNDOMR', 'CODESTUNI', 'CODFILEPD'],
 	value_vars=['VLRVNDFATLIQ','VLRRCTLIQAPU','VLRMRGBRT', 'VLRCSTMC'],
 	var_name='MEDIDA',
 	value_name='DRIVER')
@@ -142,7 +145,7 @@ confere5.columns = confere5.columns.get_level_values(1)
 confere5.loc[:,'MC'] = confere5['VLRMRGBRT'] + confere5['VLRCSTMC']
 
 #Gera dataset OMR_COMPRAS_Final
-df_full = df_full.pivot_table(index=['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'CODESTUNI', 'CODFILEPD', 'DESTIPCNLVNDOMR', 'DESCTGPRD', 'DESDRTCLLATU'], columns=['MEDIDA'], values='DRIVER', aggfunc=sum).reset_index()
+df_full = df_full.pivot_table(index=['NOMMES', 'CODGRPPRD', 'CODCTGPRD', 'CODSUBCTGPRD', 'DESCTGPRD', 'CODDIVFRN', 'DESDIVFRN', 'NOMGRPECOFRN', 'DESDRTCLLATU', 'DESCLLCMPATU', 'DESTIPCNLVNDOMR', 'CODESTUNI', 'CODFILEPD'], columns=['MEDIDA'], values='DRIVER', aggfunc=sum).reset_index()
 df_full = df_full.query('VLRVNDFATLIQ>0')
 df_full.eval('VLRMRGCRB=VLRMRGBRT+VLRCSTMC', inplace=True)
 df_full.reset_index(drop=True, inplace=True)

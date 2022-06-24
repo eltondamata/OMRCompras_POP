@@ -1,12 +1,14 @@
-#elton.mata@martins.com.br
-#Objetivo: Calcular RL, MB, MC para o POP por Fornecedor x UF (Referencia = orcado original OCD)
-#Dataset final POP DIVFRN x UF com FAT, RL, MB, MC, CSTMC = OMR_FRNUFCNL (Exportado para OMR_FRNUF_POP.pkl)
-#Pega a descricao da Diretoria e da Celula da base orcado original (OMR_COMPRAS_OCD.pkl), quando ha meta POP definida para fornecedor que nao tem orcado entao pega a descricao do arquivo (Faturamento Compras POP.xlsx)
+'''
+Autor: elton.mata@martins.com.br
+Objetivo: Calcular RL, MB, MC para o POP por Fornecedor x UF (Referencia = orcado original OCD)
+Dataset final POP DIVFRN x UF com FAT, RL, MB, MC, CSTMC = OMR_FRNUFCNL (Exportado para OMR_FRNUF_POP.pkl)
+Pega a descricao da Diretoria e da Celula da base orcado original (OMR_COMPRAS_OCD.pkl), quando ha meta POP definida para fornecedor que nao tem orcado entao pega a descricao do arquivo (Faturamento Compras POP.xlsx)
 
-#Glossario:
-#OCD=Meta do Orcado original (Planejamento Anual)
-#POP=Meta do Planejamento Operacional
-#FAT=Faturamento, RL=Receita Liquida, MB=Margem Bruta, MC=Margem de Contribuicao, CSTMC=Custos na Margem de Contribuicao (MB-MC)
+Glossario:
+OCD=Meta do Orcado original (Planejamento Anual)
+POP=Meta do Planejamento Operacional
+FAT=Faturamento, RL=Receita Liquida, MB=Margem Bruta, MC=Margem de Contribuicao, CSTMC=Custos na Margem de Contribuicao (MB-MC)
+'''
 
 import pandas as pd
 import agate
@@ -103,7 +105,7 @@ confere.loc['TOTAL POP'] = confere.sum(axis=0)
 confere.loc['TOTAL OCD ORIGINAL'] = DIVFRN_UF_FIL_CNL[valores].sum()
 print(confere.reset_index().to_markdown(tablefmt='github', floatfmt=',.2f', index=False),'\n')
 
-#Exporta dataset's para arquivo .pkl
+#Exporta dataset's para arquivo .feather
 OMR_FRNUFCNL.to_feather(caminho + 'bd/OMR_FRNUFCNL_POP.ft')
 OMR_FRN_FIL.to_feather(caminho + 'bd/OMR_FRN_FIL_POP.ft')
 OMR_CODESTUNI.to_feather(caminho + 'bd/OMR_CODESTUNI_POP.ft')
