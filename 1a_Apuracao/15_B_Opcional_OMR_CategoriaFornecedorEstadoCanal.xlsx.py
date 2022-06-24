@@ -10,7 +10,7 @@ Caso não seja necessário ajustes nesse nível de detalhe não é necessário e
 
 import pandas as pd
 
-with open('../Parametros/caminho.txt','r') as f:
+with open(r'../Parametros/caminho.txt','r') as f:
     caminho = f.read()
     
 omrcmp = pd.read_feather(caminho + 'bd/OMR_COMPRAS_POP.ft')
