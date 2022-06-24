@@ -10,30 +10,32 @@ OMRCOMPRAS_POP = pd.read_feather(caminho + 'bd/OMR_COMPRAS_POP.ft')
 NUMANOMESOCD = int(mesref)
 
 dimensoes = ['DESDRTCLLATU', 'DESCTGPRD', 'DESDIVFRN', 'NOMGRPECOFRN', 'DESCLLCMPATU']
-valores = ['VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB']
+valores = ['VLRVNDFATLIQ', 'VLRRCTLIQAPU', 'VLRMRGBRT', 'VLRMRGCRB', 'VLRCSTMC']
 
 DIRETORIA_OCD = OMRCOMPRAS_OCD.groupby(dimensoes)[valores].sum().div(1000).reset_index()
-DIRETORIA_OCD.columns = ['DESDRTCLLATU', 'DESCTGPRD', 'DESDIVFRN', 'NOMGRPECOFRN', 'DESCLLCMPATU', 'FAT_OCD', 'RL_OCD', 'MB_OCD', 'MC_OCD']
+DIRETORIA_OCD.columns = ['DESDRTCLLATU', 'DESCTGPRD', 'DESDIVFRN', 'NOMGRPECOFRN', 'DESCLLCMPATU', 'FAT_OCD', 'RL_OCD', 'MB_OCD', 'MC_OCD', 'VLRCSTMC_OCD']
 
 DIRETORIA_POP = OMRCOMPRAS_POP.groupby(dimensoes)[valores].sum().div(1000).reset_index()
-DIRETORIA_POP.columns = ['DESDRTCLLATU', 'DESCTGPRD', 'DESDIVFRN', 'NOMGRPECOFRN', 'DESCLLCMPATU', 'FAT_POP', 'RL_POP', 'MB_POP', 'MC_POP']
+DIRETORIA_POP.columns = ['DESDRTCLLATU', 'DESCTGPRD', 'DESDIVFRN', 'NOMGRPECOFRN', 'DESCLLCMPATU', 'FAT_POP', 'RL_POP', 'MB_POP', 'MC_POP', 'VLRCSTMC_POP']
 
 DIRETORIA = pd.merge(DIRETORIA_OCD, DIRETORIA_POP, how='outer', on=['DESDRTCLLATU', 'DESCTGPRD', 'DESDIVFRN', 'NOMGRPECOFRN', 'DESCLLCMPATU'])
 DIRETORIA = DIRETORIA.fillna(0)
 DIRETORIA['PERMB'] = DIRETORIA['MB_POP'].div(DIRETORIA['RL_POP'])
 DIRETORIA['FATRL'] = DIRETORIA['FAT_POP'].div(DIRETORIA['RL_POP'])
+DIRETORIA['PERCSTMC'] = DIRETORIA['VLRCSTMC_POP'].div(DIRETORIA['RL_POP'])
 DIRETORIA.loc[DIRETORIA.RL_POP == 0,'PERMB'] = 0.23
 DIRETORIA = DIRETORIA.sort_values(by='FAT_POP', ascending=False)
 
 ESTADO_OCD = OMRCOMPRAS_OCD.groupby(['CODESTUNI'])[valores].sum().div(1000).reset_index()
-ESTADO_OCD.columns = ['CODESTUNI', 'FAT_OCD', 'RL_OCD', 'MB_OCD', 'MC_OCD']
+ESTADO_OCD.columns = ['CODESTUNI', 'FAT_OCD', 'RL_OCD', 'MB_OCD', 'MC_OCD', 'VLRCSTMC_OCD']
 
 ESTADO_POP = OMRCOMPRAS_POP.groupby(['CODESTUNI'])[valores].sum().div(1000).reset_index()
-ESTADO_POP.columns = ['CODESTUNI', 'FAT_POP', 'RL_POP', 'MB_POP', 'MC_POP']
+ESTADO_POP.columns = ['CODESTUNI', 'FAT_POP', 'RL_POP', 'MB_POP', 'MC_POP', 'VLRCSTMC_POP']
 
 ESTADO = pd.merge(ESTADO_OCD, ESTADO_POP, how='outer', on=['CODESTUNI'])
 ESTADO['PERMB'] = ESTADO['MB_POP'].div(ESTADO['RL_POP'])
 ESTADO['FATRL'] = ESTADO['FAT_POP'].div(ESTADO['RL_POP'])
+ESTADO['PERCSTMC'] = ESTADO['VLRCSTMC_POP'].div(ESTADO['RL_POP'])
 ESTADO.loc[ESTADO.RL_POP == 0,'PERMB'] = 0.23
 ESTADO = ESTADO.sort_values(by='FAT_POP', ascending=False)
 
@@ -67,6 +69,8 @@ dfxls = DIRETORIA.query('DESDRTCLLATU=="VAREJO ALIMENTAR E FARMA"')[['PERMB']]
 dfxls.to_excel(writer, sheet_name=planilha, startcol=18, startrow=7, header=False, index=False)
 dfxls = DIRETORIA.query('DESDRTCLLATU=="VAREJO ALIMENTAR E FARMA"')[['FATRL']]
 dfxls.to_excel(writer, sheet_name=planilha, startcol=14, startrow=7, header=False, index=False)
+dfxls = DIRETORIA.query('DESDRTCLLATU=="VAREJO ALIMENTAR E FARMA"')[['PERCSTMC']]
+dfxls.to_excel(writer, sheet_name=planilha, startcol=15, startrow=7, header=False, index=False)
 
 planilha = 'ELETRO'
 ws = book[planilha]
@@ -87,6 +91,8 @@ dfxls = DIRETORIA.query('DESDRTCLLATU=="ELETRO"')[['PERMB']]
 dfxls.to_excel(writer, sheet_name=planilha, startcol=18, startrow=7, header=False, index=False)
 dfxls = DIRETORIA.query('DESDRTCLLATU=="ELETRO"')[['FATRL']]
 dfxls.to_excel(writer, sheet_name=planilha, startcol=14, startrow=7, header=False, index=False)
+dfxls = DIRETORIA.query('DESDRTCLLATU=="ELETRO"')[['PERCSTMC']]
+dfxls.to_excel(writer, sheet_name=planilha, startcol=15, startrow=7, header=False, index=False)
 
 planilha = 'MARTCON'
 ws = book[planilha]
@@ -107,6 +113,8 @@ dfxls = DIRETORIA.query('DESDRTCLLATU=="MARTCON/AGROVET"')[['PERMB']]
 dfxls.to_excel(writer, sheet_name=planilha, startcol=18, startrow=7, header=False, index=False)
 dfxls = DIRETORIA.query('DESDRTCLLATU=="MARTCON/AGROVET"')[['FATRL']]
 dfxls.to_excel(writer, sheet_name=planilha, startcol=14, startrow=7, header=False, index=False)
+dfxls = DIRETORIA.query('DESDRTCLLATU=="MARTCON/AGROVET"')[['PERCSTMC']]
+dfxls.to_excel(writer, sheet_name=planilha, startcol=15, startrow=7, header=False, index=False)
 
 planilha = 'UF'
 ws = book[planilha]
@@ -127,6 +135,8 @@ dfxls = ESTADO['PERMB']
 dfxls.to_excel(writer, sheet_name=planilha, startcol=15, startrow=7, header=False, index=False)
 dfxls = ESTADO['FATRL']
 dfxls.to_excel(writer, sheet_name=planilha, startcol=11, startrow=7, header=False, index=False)
+dfxls = ESTADO['PERCSTMC']
+dfxls.to_excel(writer, sheet_name=planilha, startcol=12, startrow=7, header=False, index=False)
 
 writer.save()
 book.close()

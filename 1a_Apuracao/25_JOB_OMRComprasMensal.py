@@ -6,8 +6,8 @@ Cubo: Orcamento Matricial > Orçamento Matricial de Receita - OMR > OMR Compras 
 Carga da Fato: 30 minutos
 Tempo total (Fato e Cubo):
 29/09/2020 02:29 (ter 18:30-20:59)
-30/04/2021 01:27 (sex 14:50-16:17)
 31/12/2021 01:31 (sex 12:51-14:22)
+30/05/2022 01:09 (seg 16:30-17:39)
 
 Assunto: 
 Execução eventual -- WADWH31B
