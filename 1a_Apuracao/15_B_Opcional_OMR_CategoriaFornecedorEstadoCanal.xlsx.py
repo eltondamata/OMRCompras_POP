@@ -1,5 +1,8 @@
 #elton.mata@martins.com.br
 '''
+ATENÇÃO!!! Não é necessário rodar esse processo caso não tenha necessidade de definir a meta no detalhe do cruzmento ( Categoria x Fornecedor x Estado x Canal)
+O processo para retorno das metas definidas nesse arquivo é: "22_B_Opcional_BreakBackOMR_COMPRAS_Final.py"
+
 Atualiza arquivo OMR_CategoriaFornecedorEstadoCanal.xlsx com meta POP
 Arquivo usado para ajustar a meta nos cruzamento Categoria x Fornecedor x Estado x Canal (Opcional)
 Caso não seja necessário ajustes nesse nível de detalhe não é necessário executar esse processo

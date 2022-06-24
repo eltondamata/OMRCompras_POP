@@ -1,8 +1,10 @@
-#elton.mata@martins.com.br
 '''
+Autor: elton.mata@martins.com.br
+ATENÇÃO!!! Esse processo substitui o anterior "22_A_BreakBackOMR_COMPRAS_Final.py"
+
 Processo para retorno das metas definidas no arquivo "OMR_CategoriaFornecedorEstadoCanal.xlsx"
 Executar esse processo apenas caso as metas sejam definidas por esse arquivo.
-Se a meta for definida pelo arquivo "Plan_Operacional_CARGA.xlsx" executar esse outro processo "22_BreakBackOMR_COMPRAS_Final.py"
+Se a meta for definida pelo arquivo "Plan_Operacional_CARGA.xlsx" executar esse outro processo "22_A_BreakBackOMR_COMPRAS_Final.py"
 
 Gera base de carga OMR Compras POP (alem das dimensoes do arquivo abre a meta por subcategoria e filial)
 '''
