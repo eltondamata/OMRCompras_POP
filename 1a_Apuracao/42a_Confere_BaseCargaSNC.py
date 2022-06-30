@@ -74,9 +74,9 @@ else:
     pvt = pvt.reset_index()
     
     weekdaydic = {1: 'dom', 2:'seg', 3:'ter', 4:'qua', 5:'qui', 6:'sex', 7:'sab'}
-    pvt['WeekDay'] = (pvt['DATREF'].dt.strftime('%w').astype(int)+1).map(weekdaydic)
-    pvt.iloc[-1:,-1] = 'TOTAL'
-    #pvt.to_csv(r'..\ConfereBaseCarga_SNC.csv', sep=";", encoding="iso-8859-1", decimal=",", float_format='%.2f', date_format='%d/%m/%Y', index=False)
+    pvt.insert(0, 'Dia', pvt['DATREF'].dt.strftime("%d") + ' ' + (pvt['DATREF'].dt.strftime('%w').astype(int)+1).map(weekdaydic))
+    del pvt['DATREF']
+    pvt.iloc[-1:,0] = 'TOTAL'
     print("Faturamento")
     print(tabulate(pvt, headers='keys', tablefmt='psql', floatfmt=',.2f', showindex=False, numalign='right'),'\n')
     
@@ -88,8 +88,9 @@ else:
     pvtmb = pvtmb.append(pd.DataFrame(index=last_date))
     pvtmb.iloc[-1,:] = pvtmb.sum(axis=0)
     pvtmb = pvtmb.reset_index()
-    pvtmb['WeekDay'] = (pvtmb['DATREF'].dt.strftime('%w').astype(int)+1).map(weekdaydic)
-    pvtmb.iloc[-1:,-1] = 'TOTAL'
+    pvtmb.insert(0, 'Dia', pvtmb['DATREF'].dt.strftime("%d") + ' ' + (pvtmb['DATREF'].dt.strftime('%w').astype(int)+1).map(weekdaydic))
+    del pvtmb['DATREF']
+    pvtmb.iloc[-1:,0] = 'TOTAL'
     print("Margem Bruta")
     print(tabulate(pvtmb, headers='keys', tablefmt='psql', floatfmt=',.2f', showindex=False, numalign='right'),'\n')
     
@@ -101,8 +102,9 @@ else:
     pvtmb = pvtmb.append(pd.DataFrame(index=last_date))
     pvtmb.iloc[-1,:] = pvtmb.sum(axis=0)
     pvtmb = pvtmb.reset_index()
-    pvtmb['WeekDay'] = (pvtmb['DATREF'].dt.strftime('%w').astype(int)+1).map(weekdaydic)
-    pvtmb.iloc[-1:,-1] = 'TOTAL'
+    pvtmb.insert(0, 'Dia', pvtmb['DATREF'].dt.strftime("%d") + ' ' + (pvtmb['DATREF'].dt.strftime('%w').astype(int)+1).map(weekdaydic))
+    del pvtmb['DATREF']
+    pvtmb.iloc[-1:,0] = 'TOTAL'
     print("Margem Contribuicao")
     print(tabulate(pvtmb, headers='keys', tablefmt='psql', floatfmt=',.2f', showindex=False, numalign='right'))
     
